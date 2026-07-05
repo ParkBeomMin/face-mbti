@@ -22,6 +22,7 @@ const elNick = document.getElementById("resultNick");
 const elDesc = document.getElementById("resultDesc");
 const elBars = document.getElementById("bars");
 const retryBtn = document.getElementById("retryBtn");
+const tmBadge = document.getElementById("tmBadge");
 
 const { MBTI_INFO, inferMbti, scoresToType } = window.MBTI;
 
@@ -39,6 +40,66 @@ let lastTs = null;          // 직전 프레임 타임스탬프 (얼굴 사라�
 let locked = false;         // 결과 확정 여부
 let lockedType = null;      // 확정된 타입 (예: "ENFP")
 let cardMode = null;        // 카드 표시 상태: "measuring" | 타입 문자열
+
+/* ---------- 티처블 머신(선택) ----------
+ * models/tm/ 에 티처블 머신 TensorFlow.js 내보내기 3파일
+ * (model.json, weights.bin, metadata.json)을 넣으면 자동으로 사용합니다.
+ * 클래스 이름은 MBTI 4글자(예: ENFP)여야 해요. 없으면 기본 관상 로직 사용. */
+let tmModel = null;         // { model, labels }
+let tmAxes = null;          // 최근 TM 추론 결과 {ei, sn, tf, jp}
+const tmCanvas = document.createElement("canvas");
+tmCanvas.width = tmCanvas.height = 224;
+const tmCtx = tmCanvas.getContext("2d", { willReadFrequently: true });
+
+async function tryLoadTmModel() {
+  try {
+    const res = await fetch("./models/tm/metadata.json");
+    if (!res.ok) return null;
+    const meta = await res.json();
+    const labels = (meta.labels || []).map((s) => String(s).trim().toUpperCase());
+    if (labels.length < 2 || !labels.every((l) => /^[EI][SN][TF][JP]$/.test(l))) {
+      console.warn("[TM] 클래스 이름이 MBTI 4글자가 아니에요. 기본 로직을 사용합니다:", labels);
+      return null;
+    }
+    const model = await faceapi.tf.loadLayersModel("./models/tm/model.json");
+    console.log("[TM] 나만의 학습 모델 로드 완료! 클래스:", labels.join(", "));
+    return { model, labels };
+  } catch (e) {
+    console.warn("[TM] 학습 모델 로드 실패 → 기본 관상 로직 사용:", e.message);
+    return null;
+  }
+}
+
+/** 얼굴 영역을 224x224로 잘라 TM 모델로 추론 → 4축 점수 */
+async function tmPredict(det) {
+  const b = det.detection.box;
+  const m = 0.25; // 박스 주변 여유
+  const sx = Math.max(0, b.x - b.width * m);
+  const sy = Math.max(0, b.y - b.height * m);
+  const sw = Math.min(video.videoWidth - sx, b.width * (1 + 2 * m));
+  const sh = Math.min(video.videoHeight - sy, b.height * (1 + 2 * m));
+  tmCtx.drawImage(video, sx, sy, sw, sh, 0, 0, 224, 224);
+
+  const tfjs = faceapi.tf;
+  const out = tfjs.tidy(() =>
+    tmModel.model.predict(
+      tfjs.browser.fromPixels(tmCanvas).toFloat().div(127.5).sub(1).expandDims(0)
+    )
+  );
+  const probs = await out.data();
+  out.dispose();
+
+  // 각 축의 점수 = 해당 글자를 가진 클래스들의 확률 합 (예: ei = E***들의 합)
+  const axes = { ei: 0, sn: 0, tf: 0, jp: 0 };
+  tmModel.labels.forEach((l, i) => {
+    const p = probs[i] || 0;
+    if (l[0] === "E") axes.ei += p;
+    if (l[1] === "N") axes.sn += p;
+    if (l[2] === "F") axes.tf += p;
+    if (l[3] === "P") axes.jp += p;
+  });
+  return axes;
+}
 
 /* ---------- 모델 로드 ---------- */
 async function loadModels() {
@@ -67,7 +128,8 @@ startBtn.addEventListener("click", async () => {
   startHint.hidden = true;
   loading.hidden = false;
   try {
-    await loadModels();
+    [, tmModel] = await Promise.all([loadModels(), tryLoadTmModel()]);
+    tmBadge.hidden = !tmModel;
     await startCamera();
   } catch (err) {
     loading.hidden = true;
@@ -88,6 +150,7 @@ retryBtn.addEventListener("click", () => {
   locked = false;
   lockedType = null;
   cardMode = null;
+  tmAxes = null;
   retryBtn.hidden = true;
 });
 
@@ -102,7 +165,12 @@ function loop(ts) {
       .detectSingleFace(video, detectorOptions)
       .withFaceLandmarks()
       .withFaceExpressions()
-      .then((det) => { latestDet = det || null; })
+      .then(async (det) => {
+        latestDet = det || null;
+        if (det && tmModel && !locked) {
+          try { tmAxes = await tmPredict(det); } catch (e) { /* TM 실패 시 기본 로직으로 */ }
+        }
+      })
       .catch(() => { latestDet = null; })
       .finally(() => { busy = false; });
   }
@@ -131,8 +199,8 @@ function render(det, ts) {
   if (lastTs !== null) measured = Math.min(MEASURE_MS, measured + (ts - lastTs));
   lastTs = ts;
 
-  // 4축 점수 계산 + 부드럽게 누적
-  const raw = inferMbti(det);
+  // 4축 점수 계산 + 부드럽게 누적 (학습 모델이 있으면 그 결과를 우선 사용)
+  const raw = (tmModel && tmAxes) ? tmAxes : inferMbti(det);
   if (!smooth) smooth = { ...raw };
   else for (const k of ["ei", "sn", "tf", "jp"]) smooth[k] += ALPHA * (raw[k] - smooth[k]);
 

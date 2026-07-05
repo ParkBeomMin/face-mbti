@@ -133,6 +133,21 @@ html, body {
 .retry-btn:hover { transform: translateY(-2px) scale(1.04); }
 .retry-btn:active { transform: scale(.96); }
 
+/* 티처블 머신 모델 사용 중 배지 */
+.tm-badge {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  font-size: 13px;
+  color: #5a4a63;
+  background: rgba(255, 255, 255, .88);
+  border: 2px solid var(--lav);
+  border-radius: 999px;
+  padding: 5px 14px;
+  box-shadow: 0 4px 12px rgba(150, 130, 200, .25);
+}
+
 /* 결과 확정 축하 컨페티 */
 .confetti {
   position: absolute;

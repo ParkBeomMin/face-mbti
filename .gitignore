@@ -2,3 +2,9 @@ node_modules/
 *.tgz
 .DS_Store
 scratch_*
+
+# 수집한 연예인 사진은 초상권 문제로 절대 커밋하지 않아요
+dataset/
+tools/.cache/
+__pycache__/
+*.pyc
