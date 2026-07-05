@@ -121,6 +121,32 @@ html, body {
 .bar-fill.tf { background: linear-gradient(90deg, var(--sky), var(--lav)); }
 .bar-fill.jp { background: linear-gradient(90deg, var(--lav), var(--pink)); }
 
+.retry-btn {
+  margin-top: 18px;
+  font-family: inherit; font-size: 17px; color: #4c7a63;
+  background: linear-gradient(135deg, var(--mint), #a5e6c3);
+  border: none; border-radius: 999px;
+  padding: 11px 26px; cursor: pointer;
+  box-shadow: 0 6px 16px rgba(120, 200, 160, .45);
+  transition: transform .15s ease;
+}
+.retry-btn:hover { transform: translateY(-2px) scale(1.04); }
+.retry-btn:active { transform: scale(.96); }
+
+/* 결과 확정 축하 컨페티 */
+.confetti {
+  position: absolute;
+  bottom: -30px;
+  z-index: 4;
+  pointer-events: none;
+  animation: confettiUp 1.8s ease-out forwards;
+}
+@keyframes confettiUp {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-105vh) rotate(340deg); opacity: 0; }
+}
+
 .foot { position: relative; z-index: 1; text-align: center; padding: 10px 16px 26px; font-size: 13px; opacity: .7; }
 
 @media (max-width: 720px) {
