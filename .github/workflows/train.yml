@@ -72,6 +72,19 @@ jobs:
           path: dataset/
           retention-days: 3
 
+      - name: 관리자 페이지용 미리보기 생성
+        run: python tools/make_preview.py
+
+      - name: 미리보기를 dataset-preview 브랜치로 푸시
+        run: |
+          cd preview
+          git init -q -b dataset-preview
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "chore: dataset preview (run #${{ github.run_number }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" dataset-preview
+
       - name: 모델 학습 + TF.js 내보내기
         run: python tools/train_model.py --epochs "${{ inputs.epochs }}"
 

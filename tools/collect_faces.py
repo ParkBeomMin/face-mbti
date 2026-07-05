@@ -34,6 +34,7 @@ tools/celebs.csv 의 "MBTI,연예인이름" 목록을 읽어서
 
 import argparse
 import csv
+import hashlib
 import re
 import shutil
 import sys
@@ -43,6 +44,19 @@ from pathlib import Path
 MBTI_RE = re.compile(r"^[EI][SN][TF][JP]$")
 ROOT = Path(__file__).resolve().parent.parent
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+EXCLUDED_FILE = ROOT / "tools" / "excluded.txt"
+
+
+def load_excluded(path: Path = EXCLUDED_FILE) -> set[str]:
+    """관리자 페이지에서 '제외' 표시한 사진들의 md5 목록을 읽는다."""
+    if not path.exists():
+        return set()
+    out = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            out.add(line.split()[0].lower())
+    return out
 
 
 def load_celebs(csv_path: Path, only: set[str] | None) -> list[tuple[str, str]]:
@@ -165,10 +179,16 @@ def crop_largest_face(img, detector, min_face: int, margin: float = 0.35):
 
 
 def process_person(mbti: str, name: str, limit: int, dataset: Path,
-                   crop: bool, min_face: int) -> tuple[int, int]:
-    """한 인물의 이미지를 다운로드하고 (크롭해서) dataset/<MBTI>/에 저장."""
+                   crop: bool, min_face: int,
+                   excluded: set[str] | None = None) -> tuple[int, int]:
+    """한 인물의 이미지를 다운로드하고 (크롭해서) dataset/<MBTI>/에 저장.
+
+    파일명에 사진 지문(md5 앞 8자리)을 붙여서, 관리자 페이지에서 '제외'한
+    사진(tools/excluded.txt)은 다음 수집부터 자동으로 걸러진다.
+    """
     import cv2
 
+    excluded = excluded or set()
     out_dir = dataset / mbti
     out_dir.mkdir(parents=True, exist_ok=True)
     safe = re.sub(r"[^\w가-힣]+", "_", name).strip("_") or "unknown"
@@ -180,6 +200,7 @@ def process_person(mbti: str, name: str, limit: int, dataset: Path,
         downloaded = download_images(name, limit, tmp_dir)
 
         saved = 0
+        seen: set[str] = set()
         for src in sorted(tmp_dir.iterdir()):
             if src.suffix.lower() not in IMG_EXTS:
                 continue
@@ -193,9 +214,15 @@ def process_person(mbti: str, name: str, limit: int, dataset: Path,
                 img = face
             if min(img.shape[:2]) < min_face:
                 continue
+            ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 92])
+            if not ok:
+                continue
+            digest = hashlib.md5(buf.tobytes()).hexdigest()
+            if digest in excluded or digest in seen:  # 검수 제외분/중복 스킵
+                continue
+            seen.add(digest)
             saved += 1
-            cv2.imwrite(str(out_dir / f"{safe}_{saved:03d}.jpg"), img,
-                        [cv2.IMWRITE_JPEG_QUALITY, 92])
+            (out_dir / f"{safe}_{digest[:8]}.jpg").write_bytes(buf.tobytes())
     return downloaded, saved
 
 
@@ -250,12 +277,17 @@ def main() -> None:
         sys.exit(f"\n필요한 패키지가 없어요: {e.name}\n"
                  f"먼저 실행해주세요:  pip install icrawler opencv-python")
 
+    excluded = load_excluded()
+    if excluded:
+        print(f"🚫 검수 제외 목록: {len(excluded)}장 (tools/excluded.txt)")
+
     total_saved = 0
     for i, (mbti, name) in enumerate(celebs, 1):
         print(f"\n[{i}/{len(celebs)}] {mbti} · {name} 수집 중...")
         try:
             downloaded, saved = process_person(
-                mbti, name, args.limit, args.out, not args.no_crop, args.min_face)
+                mbti, name, args.limit, args.out, not args.no_crop, args.min_face,
+                excluded=excluded)
         except Exception as e:  # 한 명 실패해도 계속
             print(f"   ⚠️  실패: {e}")
             continue
