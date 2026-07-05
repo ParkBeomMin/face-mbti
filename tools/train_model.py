@@ -79,10 +79,23 @@ def build_model(n_classes: int, alpha: float, pretrained: bool):
 
 
 def load_datasets(data_dir: Path, labels: list[str], batch: int, val_split: float, seed: int):
+    import tempfile
+
     import tensorflow as tf
 
+    # keras는 class_names가 하위 폴더 전체와 일치해야 함 —
+    # 사진이 부족해 제외된 유형 폴더가 섞여 있으면 거부하므로,
+    # 유효한 유형 폴더만 복사한 스테이징 디렉터리에서 학습한다.
+    staging = Path(tempfile.mkdtemp(prefix="train_ds_"))
+    for label in labels:
+        dst = staging / label
+        dst.mkdir()
+        for p in (data_dir / label).iterdir():
+            if p.suffix.lower() in IMG_EXTS:
+                shutil.copy2(p, dst / p.name)
+
     common = dict(
-        directory=str(data_dir),
+        directory=str(staging),
         labels="inferred",
         label_mode="int",
         class_names=labels,

@@ -85,7 +85,11 @@ def load_celebs(csv_path: Path, only: set[str] | None) -> list[tuple[str, str]]:
 
 
 def download_images(name: str, limit: int, out_dir: Path) -> int:
-    """Bing 이미지 검색으로 인물 사진을 out_dir에 다운로드한다."""
+    """Bing 이미지 검색으로 인물 사진 후보를 out_dir에 다운로드한다.
+
+    품질 필터를 통과 못 하는 사진이 많으므로 목표치(limit)의 2배를 받아온다.
+    filters: 얼굴 위주(face) + 대형(large) 사진만 — 단체사진/저화질을 크게 줄여줌.
+    """
     from icrawler.builtin import BingImageCrawler
 
     crawler = BingImageCrawler(
@@ -93,11 +97,10 @@ def download_images(name: str, limit: int, out_dir: Path) -> int:
         downloader_threads=4,
         log_level=40,  # ERROR만 (조용히)
     )
-    # 얼굴이 크게 나오도록 검색어에 '얼굴' 추가 + 인물 필터
     crawler.crawl(
-        keyword=f"{name} 얼굴",
-        max_num=limit,
-        filters={"type": "photo"},
+        keyword=name,
+        max_num=limit * 2,
+        filters={"type": "photo", "size": "large", "people": "face"},
     )
     return sum(1 for p in out_dir.iterdir() if p.suffix.lower() in IMG_EXTS)
 
@@ -137,8 +140,8 @@ def make_detector():
     return ("yunet", det)
 
 
-def detect_largest_face(img, detector, min_face: int):
-    """가장 큰 얼굴의 (x, y, w, h)를 반환. 없으면 None."""
+def detect_faces(img, detector, min_face: int) -> list[tuple[int, int, int, int]]:
+    """이미지의 모든 얼굴 (x, y, w, h) 목록을 반환 (큰 순서)."""
     import cv2
 
     kind, det = detector
@@ -146,31 +149,44 @@ def detect_largest_face(img, detector, min_face: int):
 
     if kind == "haar":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = det.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5,
-                                     minSize=(min_face, min_face))
-        if len(faces) == 0:
-            return None
-        return tuple(int(v) for v in max(faces, key=lambda f: f[2] * f[3]))
+        found = det.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5,
+                                     minSize=(min_face // 2, min_face // 2))
+        faces = [tuple(int(v) for v in f) for f in found]
+    else:
+        # YuNet: 큰 이미지는 축소해서 검출 후 좌표 복원
+        scale = min(1.0, 1024 / max(W, H))
+        small = cv2.resize(img, (int(W * scale), int(H * scale))) if scale < 1.0 else img
+        det.setInputSize((small.shape[1], small.shape[0]))
+        _, found = det.detect(small)
+        faces = [] if found is None else [
+            (int(f[0] / scale), int(f[1] / scale), int(f[2] / scale), int(f[3] / scale))
+            for f in found]
+    return sorted(faces, key=lambda f: f[2] * f[3], reverse=True)
 
-    # YuNet: 큰 이미지는 축소해서 검출 후 좌표 복원
-    scale = min(1.0, 1024 / max(W, H))
-    small = cv2.resize(img, (int(W * scale), int(H * scale))) if scale < 1.0 else img
-    det.setInputSize((small.shape[1], small.shape[0]))
-    _, faces = det.detect(small)
-    if faces is None or len(faces) == 0:
+
+def detect_largest_face(img, detector, min_face: int):
+    """가장 큰 얼굴의 (x, y, w, h)를 반환. 없으면 None."""
+    faces = detect_faces(img, detector, min_face)
+    return faces[0] if faces else None
+
+
+def crop_main_face(img, detector, min_face: int, margin: float = 0.35):
+    """이미지의 '주인공 얼굴' 하나를 여유를 두고 잘라 반환.
+
+    None을 반환하는 경우: 얼굴 없음 / 너무 작음 / 단체사진
+    (두 번째 얼굴이 가장 큰 얼굴의 30% 이상 크기면 누구 얼굴인지
+    보장할 수 없어서 통째로 버린다)
+    """
+    faces = detect_faces(img, detector, min_face)
+    if not faces:
         return None
-    x, y, w, h = max(faces, key=lambda f: f[2] * f[3])[:4]
-    return (int(x / scale), int(y / scale), int(w / scale), int(h / scale))
-
-
-def crop_largest_face(img, detector, min_face: int, margin: float = 0.35):
-    """이미지에서 가장 큰 얼굴 하나를 여유를 두고 잘라 반환. 없으면 None."""
-    found = detect_largest_face(img, detector, min_face)
-    if found is None:
-        return None
-    x, y, w, h = found
+    x, y, w, h = faces[0]
     if min(w, h) < min_face:
         return None
+    if len(faces) > 1:
+        x2, y2, w2, h2 = faces[1]
+        if w2 * h2 >= 0.3 * (w * h):
+            return None
     H, W = img.shape[:2]
     mx, my = int(w * margin), int(h * margin)
     x0, y0 = max(0, x - mx), max(0, y - my)
@@ -178,9 +194,14 @@ def crop_largest_face(img, detector, min_face: int, margin: float = 0.35):
     return img[y0:y1, x0:x1]
 
 
+# 하위 호환 (기존 이름)
+crop_largest_face = crop_main_face
+
+
 def process_person(mbti: str, name: str, limit: int, dataset: Path,
                    crop: bool, min_face: int,
-                   excluded: set[str] | None = None) -> tuple[int, int]:
+                   excluded: set[str] | None = None,
+                   min_sharpness: float = 40.0) -> tuple[int, int]:
     """한 인물의 이미지를 다운로드하고 (크롭해서) dataset/<MBTI>/에 저장.
 
     파일명에 사진 지문(md5 앞 8자리)을 붙여서, 관리자 페이지에서 '제외'한
@@ -202,18 +223,25 @@ def process_person(mbti: str, name: str, limit: int, dataset: Path,
         saved = 0
         seen: set[str] = set()
         for src in sorted(tmp_dir.iterdir()):
+            if saved >= limit:  # 목표치 달성 (후보는 2배로 받으므로)
+                break
             if src.suffix.lower() not in IMG_EXTS:
                 continue
             img = cv2.imread(str(src))
             if img is None:
                 continue
             if crop:
-                face = crop_largest_face(img, detector, min_face)
-                if face is None:
+                face = crop_main_face(img, detector, min_face)
+                if face is None:  # 얼굴 없음 / 너무 작음 / 단체사진
                     continue
                 img = face
             if min(img.shape[:2]) < min_face:
                 continue
+            # 흐릿한 사진 제거 (라플라시안 분산이 낮으면 초점이 나간 사진)
+            if min_sharpness > 0:
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                if cv2.Laplacian(gray, cv2.CV_64F).var() < min_sharpness:
+                    continue
             ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 92])
             if not ok:
                 continue
@@ -241,6 +269,8 @@ def main() -> None:
     ap.add_argument("--no-crop", action="store_true", help="얼굴 크롭 없이 원본 저장")
     ap.add_argument("--min-face", type=int, default=120,
                     help="이보다 작은 얼굴/이미지는 버림 (기본 120px)")
+    ap.add_argument("--min-sharpness", type=float, default=40.0,
+                    help="흐릿한 사진 버림 기준 (라플라시안 분산, 0이면 끔)")
     ap.add_argument("--dry-run", action="store_true", help="다운로드 없이 목록만 확인")
     args = ap.parse_args()
 
@@ -287,7 +317,7 @@ def main() -> None:
         try:
             downloaded, saved = process_person(
                 mbti, name, args.limit, args.out, not args.no_crop, args.min_face,
-                excluded=excluded)
+                excluded=excluded, min_sharpness=args.min_sharpness)
         except Exception as e:  # 한 명 실패해도 계속
             print(f"   ⚠️  실패: {e}")
             continue
