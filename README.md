@@ -51,13 +51,29 @@ npx serve .
 기본 관상 로직 대신, [구글 티처블 머신](https://teachablemachine.withgoogle.com/)에서 직접 학습한
 모델을 쓸 수 있어요. **모델 파일만 넣으면 앱이 자동으로 인식**하고, 화면 위에 `🤖 나만의 학습 모델 사용 중` 배지가 떠요.
 
+### 0️⃣ 학습 데이터 자동 수집 (동봉된 수집기 사용)
+
+`tools/collect_faces.py` 가 `tools/celebs.csv` 의 "MBTI,연예인" 목록을 읽어
+이미지를 검색·다운로드하고 **얼굴만 잘라** 유형별 폴더로 정리해줘요.
+
+```bash
+pip install icrawler opencv-python
+
+python tools/collect_faces.py --dry-run        # 수집 대상 확인만
+python tools/collect_faces.py                  # 인물당 30장 수집 → dataset/
+python tools/collect_faces.py --limit 50       # 인물당 50장
+python tools/collect_faces.py --only ENFP ISTJ # 특정 유형만
+```
+
+- `tools/celebs.csv` 에 인물을 자유롭게 추가/수정하세요 (한 유형에 여러 명일수록 좋아요)
+- 수집 후 폴더를 열어 **잘못 잡힌 사진(다른 사람, 화질 나쁜 것)을 꼭 지워주세요** — 데이터 품질이 정확도의 90%예요!
+- `dataset/` 은 `.gitignore` 에 등록돼 있어 실수로 커밋되지 않아요 (개인 학습용으로만 사용)
+
 ### 1️⃣ 학습하기 (코딩 필요 없음, 브라우저에서 끝!)
 
 1. https://teachablemachine.withgoogle.com/train/image 접속 → **이미지 프로젝트(표준 이미지 모델)** 선택
 2. 클래스 이름을 **MBTI 4글자**로 지정 — 예: `ENFP`, `INFP`, `ESTJ`... (16개 전부가 아니어도 OK)
-3. 각 클래스에 해당 유형으로 알려진 **연예인 얼굴 사진을 업로드** (클래스당 30~50장 이상 추천)
-   - 얼굴이 크게 나온 정면~반측면 사진, 다양한 조명/각도로 모으면 좋아요
-   - 클래스별 사진 수를 비슷하게 맞춰야 한쪽으로 쏠리지 않아요
+3. 각 클래스에 `dataset/<유형>/` 폴더의 사진을 드래그해서 업로드 (클래스당 30~50장 이상, 수량은 비슷하게)
 4. **모델 학습시키기** 클릭 → 웹캠 미리보기로 확인
 5. **모델 내보내기 → Tensorflow.js 탭 → 다운로드** 선택 → zip 안의 3개 파일 획득
 

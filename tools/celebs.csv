@@ -1,0 +1,37 @@
+# 티처블 머신 학습용 인물 목록 (형식: MBTI,이름)
+# ⚠️ 아래는 인터넷에 널리 인용되는 라벨 기준의 "예시"예요.
+#    연예인 MBTI는 본인 재검사로 바뀌기도 하니, 직접 확인하고 자유롭게 고쳐주세요!
+#    한 유형에 여러 명을 적을수록 좋아요 (줄을 추가하면 됩니다)
+MBTI,이름
+INTJ,슈가
+INTJ,김연아
+INTP,이수현
+INTP,페이커 이상혁
+ENTJ,전소연
+ENTJ,김종국
+ENTP,전현무
+ENTP,송민호
+INFJ,도경수
+INFJ,수지
+INFP,정국
+INFP,태연
+ENFJ,강다니엘
+ENFJ,아이유
+ENFP,박보영
+ENFP,제이홉
+ISTJ,임영웅
+ISTJ,윤두준
+ISFJ,경수진
+ISFJ,황민현
+ESTJ,키 샤이니
+ESTJ,안정환
+ESFJ,장원영
+ESFJ,이광수
+ISTP,지드래곤
+ISTP,공유
+ISFP,유재석
+ISFP,지민 방탄소년단
+ESTP,화사
+ESTP,덱스
+ESFP,이영지
+ESFP,조세호
