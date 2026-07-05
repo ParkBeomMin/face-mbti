@@ -48,15 +48,10 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: tools/requirements.txt
 
       - name: 의존성 설치
-        run: |
-          pip install \
-            icrawler \
-            opencv-python-headless \
-            "numpy==1.26.4" \
-            "tensorflow-cpu==2.15.1" \
-            "tensorflowjs==4.17.0"
+        run: pip install -r tools/requirements.txt
 
       - name: 데이터 수집 (celebs.csv 기반)
         run: |
