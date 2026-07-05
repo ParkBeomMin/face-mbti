@@ -113,11 +113,13 @@ def export_tfjs(model, labels: list[str], out_dir: Path) -> None:
     tfjs.converters.save_keras_model(model, str(out_dir))
 
     # 앱/티처블머신 호환 metadata.json
+    from datetime import datetime, timezone
     (out_dir / "metadata.json").write_text(json.dumps({
         "tfjsVersion": "4.17.0",
         "packageName": "face-mbti/train_model",
         "modelName": "face-mbti",
         "imageSize": IMG_SIZE,
+        "trainedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "labels": labels,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 

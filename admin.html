@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>몽글몽글 MBTI 관리자 🛠</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --pink: #ffb7d5; --pink-deep: #ff8fbf; --mint: #bdeecf; --sky: #cdebff;
+      --lav: #dcd3ff; --ink: #6b5b73; --card: rgba(255,255,255,.85);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Jua", system-ui, sans-serif; color: var(--ink);
+      background: linear-gradient(160deg,#ffe7f3 0%,#e7f4ff 45%,#eafff0 100%);
+      background-attachment: fixed; min-height: 100vh;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 20px 14px 60px; }
+    h1 { text-align: center; color: var(--pink-deep); text-shadow: 2px 2px 0 #fff; font-size: clamp(24px,5vw,34px); margin: 10px 0 4px; }
+    .sub { text-align: center; margin: 0 0 18px; opacity: .8; font-size: 14px; }
+    .sub a { color: var(--pink-deep); }
+    .card {
+      background: var(--card); border-radius: 22px; padding: 18px;
+      box-shadow: 0 8px 24px rgba(150,130,200,.2), 0 0 0 4px #fff; margin-bottom: 18px;
+    }
+    .card h2 { margin: 0 0 10px; font-size: 20px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    input, select, button {
+      font-family: inherit; font-size: 15px; color: var(--ink);
+      border: 2px solid var(--lav); border-radius: 12px; padding: 8px 12px; background: #fff;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--pink); }
+    button { cursor: pointer; transition: transform .12s; border-color: transparent; }
+    button:hover { transform: translateY(-2px); }
+    button:active { transform: scale(.97); }
+    button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-p { background: linear-gradient(135deg,var(--pink),var(--pink-deep)); color: #fff; }
+    .btn-m { background: linear-gradient(135deg,var(--mint),#a5e6c3); color: #3f6f58; }
+    .btn-s { background: #f1ecf7; }
+    .hint { font-family: "Gaegu"; font-size: 14px; opacity: .85; line-height: 1.5; margin: 8px 0 0; }
+    .msg { font-family: "Gaegu"; font-size: 15px; margin-top: 8px; min-height: 1.2em; }
+    .msg.ok { color: #2e8b57; } .msg.err { color: #d33; }
+    details summary { cursor: pointer; color: var(--pink-deep); }
+    /* csv table */
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    td { padding: 3px 4px; }
+    td input, td select { width: 100%; padding: 6px 8px; }
+    td:first-child { width: 96px; } td:last-child { width: 40px; }
+    .del { background: #ffe3e8; border-radius: 10px; padding: 6px 10px; }
+    /* runs */
+    .run { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed #e8def0; font-size: 14px; }
+    .run:last-child { border-bottom: none; }
+    .dot { font-size: 16px; }
+    .run a { color: var(--pink-deep); margin-left: auto; white-space: nowrap; }
+    /* gallery */
+    .type-head { display: flex; align-items: center; gap: 8px; margin: 14px 0 6px; font-size: 17px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px,1fr)); gap: 8px; }
+    .ph { position: relative; border-radius: 12px; overflow: hidden; cursor: pointer;
+          box-shadow: 0 3px 8px rgba(0,0,0,.12); aspect-ratio: 1; background: #f4eef8; }
+    .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ph .who { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; padding: 2px 4px;
+               background: rgba(255,255,255,.85); text-align: center; white-space: nowrap; overflow: hidden; }
+    .ph.x::after { content: "🚫"; position: absolute; inset: 0; display: flex; align-items: center;
+                   justify-content: center; font-size: 30px; background: rgba(255,80,120,.45); }
+    .badge { background: var(--lav); border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+    .sticky-save { position: sticky; bottom: 12px; text-align: center; margin-top: 14px; }
+    .sticky-save button { box-shadow: 0 6px 18px rgba(255,143,191,.5); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛠 몽글몽글 MBTI 관리자</h1>
+  <p class="sub"><a href="./index.html">← 앱으로 돌아가기</a></p>
+
+  <!-- 토큰 -->
+  <div class="card">
+    <h2>🔑 GitHub 토큰</h2>
+    <div class="row">
+      <input id="token" type="password" placeholder="ghp_... 또는 github_pat_..." style="flex:1; min-width: 220px" />
+      <button class="btn-p" onclick="saveToken()">저장</button>
+      <span id="tokenState" class="badge">미설정</span>
+    </div>
+    <details class="hint">
+      <summary>토큰 만드는 방법 (1분)</summary>
+      ① <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com/settings/personal-access-tokens/new</a> 접속<br>
+      ② Repository access → Only select repositories → <b>face-mbti</b> 선택<br>
+      ③ Permissions → <b>Contents: Read and write</b>, <b>Actions: Read and write</b> 부여 → Generate<br>
+      ④ 토큰을 위에 붙여넣고 저장 — <b>이 브라우저에만</b> 저장돼요(localStorage). 보기 전용이면 토큰 없이도 됩니다!
+    </details>
+    <p id="tokenMsg" class="msg"></p>
+  </div>
+
+  <!-- 수집·학습 실행 -->
+  <div class="card">
+    <h2>🚀 수집·학습 실행</h2>
+    <div class="row">
+      <label>인물당 <input id="inLimit" type="number" value="30" min="5" max="100" style="width:70px" />장</label>
+      <label>학습 <input id="inEpochs" type="number" value="12" min="1" max="50" style="width:60px" />회</label>
+      <input id="inOnly" placeholder="특정 유형만 (예: ENFP ISTJ, 비우면 전체)" style="flex:1; min-width:200px" />
+      <button class="btn-p" onclick="runWorkflow()">▶ 실행</button>
+    </div>
+    <p class="hint">실행하면 사진 수집 → 얼굴 크롭 → 모델 학습 → 앱 자동 배포까지 15~30분 걸려요.</p>
+    <p id="runMsg" class="msg"></p>
+    <div id="runs"><p class="hint">실행 기록 불러오는 중...</p></div>
+  </div>
+
+  <!-- 현재 모델 -->
+  <div class="card">
+    <h2>🤖 현재 모델</h2>
+    <div id="modelInfo" class="hint">확인 중...</div>
+  </div>
+
+  <!-- 목록 편집 -->
+  <div class="card">
+    <h2>📋 연예인 목록 (celebs.csv)</h2>
+    <table id="csvTable"></table>
+    <div class="row" style="margin-top:10px">
+      <button class="btn-s" onclick="addRow()">＋ 인물 추가</button>
+      <button class="btn-m" onclick="saveCsv()">💾 목록 저장(커밋)</button>
+    </div>
+    <p id="csvMsg" class="msg"></p>
+  </div>
+
+  <!-- 사진 검수 -->
+  <div class="card">
+    <h2>🖼 수집된 사진 검수</h2>
+    <p class="hint">사진을 누르면 🚫 제외 표시! 저장하면 <b>다음 수집부터</b> 그 사진은 자동으로 걸러져요.
+      갤러리는 마지막 수집 실행이 만든 미리보기(dataset-preview 브랜치) 기준이에요.</p>
+    <div id="gallery"><p class="hint">불러오는 중...</p></div>
+    <div class="sticky-save">
+      <button class="btn-p" onclick="saveExcluded()" id="saveExBtn">🚫 제외 목록 저장 (<span id="exCount">0</span>장)</button>
+    </div>
+    <p id="exMsg" class="msg"></p>
+  </div>
+</div>
+
+<script>
+/* ---------- 저장소 주소 (Pages 주소에서 자동 추론, 실패 시 기본값) ---------- */
+const OWNER = (location.hostname.endsWith(".github.io") && location.hostname.split(".")[0]) || "ParkBeomMin";
+const _seg = location.pathname.split("/").filter(Boolean);
+const REPO = (_seg.length > 1 && !_seg[0].includes(".")) ? _seg[0] : "face-mbti";
+const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
+const RAW = `https://raw.githubusercontent.com/${OWNER}/${REPO}/dataset-preview`;
+const WORKFLOW = "train.yml";
+
+/* ---------- 공통 ---------- */
+const $ = (id) => document.getElementById(id);
+let token = localStorage.getItem("fm_token") || "";
+
+function b64encode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin);
+}
+function b64decode(b64) {
+  const bin = atob(b64.replace(/\n/g, ""));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+async function gh(path, opts = {}) {
+  const headers = { Accept: "application/vnd.github+json", ...(opts.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(API + path, { ...opts, headers });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`${res.status} ${res.statusText} — ${body.slice(0, 140)}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+function setMsg(id, text, ok) {
+  const el = $(id);
+  el.textContent = text;
+  el.className = "msg " + (ok ? "ok" : "err");
+}
+function needToken(id) {
+  if (token) return false;
+  setMsg(id, "먼저 위에서 GitHub 토큰을 저장해주세요! 🔑", false);
+  return true;
+}
+
+/* ---------- 토큰 ---------- */
+function refreshTokenState() {
+  $("tokenState").textContent = token ? "설정됨 ✓" : "미설정";
+}
+function saveToken() {
+  token = $("token").value.trim();
+  if (token) localStorage.setItem("fm_token", token);
+  else localStorage.removeItem("fm_token");
+  refreshTokenState();
+  setMsg("tokenMsg", token ? "저장했어요! (이 브라우저에만 보관)" : "토큰을 지웠어요", true);
+}
+
+/* ---------- 실행 & 상태 ---------- */
+async function runWorkflow() {
+  if (needToken("runMsg")) return;
+  const inputs = {
+    limit: String($("inLimit").value || 30),
+    epochs: String($("inEpochs").value || 12),
+    upload_dataset: false,
+  };
+  const only = $("inOnly").value.trim();
+  if (only) inputs.only = only;
+  try {
+    await gh(`/actions/workflows/${WORKFLOW}/dispatches`, {
+      method: "POST",
+      body: JSON.stringify({ ref: "main", inputs }),
+    });
+    setMsg("runMsg", "실행을 걸었어요! 잠시 후 아래 기록에 나타나요 🚀", true);
+    setTimeout(loadRuns, 4000);
+  } catch (e) {
+    setMsg("runMsg", "실행 실패: " + e.message, false);
+  }
+}
+
+const DOT = { success: "✅", failure: "❌", cancelled: "⚪", in_progress: "🔄", queued: "⏳" };
+async function loadRuns() {
+  try {
+    const data = await gh(`/actions/workflows/${WORKFLOW}/runs?per_page=5`);
+    const runs = data.workflow_runs || [];
+    $("runs").innerHTML = runs.length
+      ? runs.map((r) => {
+          const st = r.status === "completed" ? r.conclusion : r.status;
+          const when = new Date(r.run_started_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+          return `<div class="run"><span class="dot">${DOT[st] || "❔"}</span>
+            <span>#${r.run_number} · ${when} · ${st}</span>
+            <a href="${r.html_url}" target="_blank">로그 보기 →</a></div>`;
+        }).join("")
+      : '<p class="hint">아직 실행 기록이 없어요.</p>';
+    if (runs.some((r) => r.status === "in_progress" || r.status === "queued")) {
+      setTimeout(loadRuns, 20000); // 진행 중이면 20초마다 갱신
+    }
+  } catch (e) {
+    $("runs").innerHTML = `<p class="msg err">실행 기록 로드 실패: ${e.message}</p>`;
+  }
+}
+
+/* ---------- 현재 모델 ---------- */
+async function loadModelInfo() {
+  try {
+    const res = await fetch(`./models/tm/metadata.json?t=${Math.floor(performance.timeOrigin)}`, { cache: "no-store" });
+    if (!res.ok) throw 0;
+    const m = await res.json();
+    $("modelInfo").innerHTML =
+      `학습 모델 <b>사용 중</b> 🎉 · 클래스 ${m.labels.length}개: ${m.labels.join(", ")}` +
+      (m.trainedAt ? `<br>학습 시각: ${new Date(m.trainedAt).toLocaleString("ko-KR")}` : "");
+  } catch {
+    $("modelInfo").textContent = "아직 학습 모델이 없어서 기본 관상 로직을 사용 중이에요. 위에서 실행해보세요!";
+  }
+}
+
+/* ---------- celebs.csv ---------- */
+const TYPES = ["INTJ","INTP","ENTJ","ENTP","INFJ","INFP","ENFJ","ENFP","ISTJ","ISFJ","ESTJ","ESFJ","ISTP","ISFP","ESTP","ESFP"];
+let csvSha = null, csvHeaderLines = [];
+
+function rowHtml(mbti = "ENFP", name = "") {
+  const opts = TYPES.map((t) => `<option ${t === mbti ? "selected" : ""}>${t}</option>`).join("");
+  return `<tr><td><select>${opts}</select></td>
+    <td><input value="${name.replace(/"/g, "&quot;")}" placeholder="이름 (검색어로 쓰여요)" /></td>
+    <td><button class="del" onclick="this.closest('tr').remove()">🗑</button></td></tr>`;
+}
+function addRow() { $("csvTable").insertAdjacentHTML("beforeend", rowHtml()); }
+
+async function loadCsv() {
+  try {
+    const f = await gh(`/contents/tools/celebs.csv`);
+    csvSha = f.sha;
+    const text = b64decode(f.content);
+    const rows = [];
+    csvHeaderLines = [];
+    for (const line of text.split("\n")) {
+      const t = line.trim();
+      if (!t) continue;
+      if (t.startsWith("#") || t.toUpperCase().startsWith("MBTI,")) { csvHeaderLines.push(line); continue; }
+      const [mbti, ...rest] = t.split(",");
+      if (/^[EI][SN][TF][JP]$/.test(mbti.trim().toUpperCase()) && rest.length)
+        rows.push([mbti.trim().toUpperCase(), rest.join(",").trim()]);
+    }
+    $("csvTable").innerHTML = rows.map(([m, n]) => rowHtml(m, n)).join("");
+  } catch (e) {
+    setMsg("csvMsg", "목록 로드 실패: " + e.message, false);
+  }
+}
+async function saveCsv() {
+  if (needToken("csvMsg")) return;
+  const lines = [...csvHeaderLines];
+  if (!lines.some((l) => l.toUpperCase().startsWith("MBTI,"))) lines.push("MBTI,이름");
+  let n = 0;
+  for (const tr of $("csvTable").querySelectorAll("tr")) {
+    const mbti = tr.querySelector("select").value;
+    const name = tr.querySelector("input").value.trim();
+    if (name) { lines.push(`${mbti},${name}`); n++; }
+  }
+  if (!n) return setMsg("csvMsg", "인물이 한 명도 없어요!", false);
+  try {
+    const res = await gh(`/contents/tools/celebs.csv`, {
+      method: "PUT",
+      body: JSON.stringify({
+        message: `chore: 관리자 페이지에서 연예인 목록 수정 (${n}명)`,
+        content: b64encode(lines.join("\n") + "\n"),
+        sha: csvSha,
+      }),
+    });
+    csvSha = res.content.sha;
+    setMsg("csvMsg", `저장(커밋) 완료! ${n}명 ✨ 다음 실행부터 반영돼요.`, true);
+  } catch (e) {
+    setMsg("csvMsg", "저장 실패: " + e.message, false);
+  }
+}
+
+/* ---------- 사진 검수 ---------- */
+let excluded = new Set();   // 이번에 제외 표시한 hash
+let exSha = null;           // tools/excluded.txt 의 sha
+let prevExcluded = [];      // 기존 파일 내용(줄 단위, 유지)
+
+async function loadGallery() {
+  try {
+    // 기존 제외 목록
+    try {
+      const f = await gh(`/contents/tools/excluded.txt`);
+      exSha = f.sha;
+      prevExcluded = b64decode(f.content).split("\n").filter((l) => l.trim());
+    } catch { exSha = null; prevExcluded = []; }
+
+    const res = await fetch(`${RAW}/index.json?t=${Math.floor(performance.timeOrigin + performance.now())}`, { cache: "no-store" });
+    if (!res.ok) {
+      $("gallery").innerHTML = '<p class="hint">아직 미리보기가 없어요 — 수집·학습을 한 번 실행하면 갤러리가 생겨요! 🌱</p>';
+      $("saveExBtn").style.display = "none";
+      return;
+    }
+    const data = await res.json();
+    const byType = {};
+    for (const it of data.items) (byType[it.type] = byType[it.type] || []).push(it);
+    const prevSet = new Set(prevExcluded.map((l) => l.split(/\s/)[0].toLowerCase()));
+    $("gallery").innerHTML = Object.keys(byType).sort().map((t) => `
+      <div class="type-head">${t} <span class="badge">${byType[t].length}장</span></div>
+      <div class="grid">${byType[t].map((it) => `
+        <div class="ph ${prevSet.has(it.hash) ? "x" : ""}" data-hash="${it.hash}" onclick="togglePh(this)">
+          <img loading="lazy" src="${RAW}/${it.file}" alt="" />
+          <div class="who">${it.person}</div>
+        </div>`).join("")}</div>`).join("") +
+      `<p class="hint" style="margin-top:10px">생성: ${new Date(data.generatedAt).toLocaleString("ko-KR")} · 총 ${data.count}장</p>`;
+    prevSet.forEach((h) => excluded.add(h));
+    updateExCount();
+  } catch (e) {
+    $("gallery").innerHTML = `<p class="msg err">갤러리 로드 실패: ${e.message}</p>`;
+  }
+}
+function togglePh(el) {
+  const h = el.dataset.hash;
+  if (excluded.has(h)) { excluded.delete(h); el.classList.remove("x"); }
+  else { excluded.add(h); el.classList.add("x"); }
+  updateExCount();
+}
+function updateExCount() { $("exCount").textContent = excluded.size; }
+
+async function saveExcluded() {
+  if (needToken("exMsg")) return;
+  const body = "# 관리자 페이지에서 제외한 사진들 (md5) — 다음 수집부터 자동으로 걸러져요\n" +
+    [...excluded].sort().join("\n") + "\n";
+  try {
+    const payload = {
+      message: `chore: 사진 검수 — ${excluded.size}장 제외`,
+      content: b64encode(body),
+    };
+    if (exSha) payload.sha = exSha;
+    const res = await gh(`/contents/tools/excluded.txt`, { method: "PUT", body: JSON.stringify(payload) });
+    exSha = res.content.sha;
+    setMsg("exMsg", `제외 목록 저장 완료! (${excluded.size}장) 다음 수집부터 반영돼요 ✨`, true);
+  } catch (e) {
+    setMsg("exMsg", "저장 실패: " + e.message, false);
+  }
+}
+
+/* ---------- 시작 ---------- */
+if (token) $("token").value = token;
+refreshTokenState();
+loadRuns();
+loadModelInfo();
+loadCsv();
+loadGallery();
+</script>
+</body>
+</html>

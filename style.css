@@ -163,6 +163,7 @@ html, body {
 }
 
 .foot { position: relative; z-index: 1; text-align: center; padding: 10px 16px 26px; font-size: 13px; opacity: .7; }
+.admin-link { color: var(--pink-deep); text-decoration: none; }
 
 @media (max-width: 720px) {
   .stage { gap: 16px; }

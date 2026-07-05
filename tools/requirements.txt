@@ -1,0 +1,7 @@
+# 수집(collect_faces.py) + 학습(train_model.py) 의존성
+# 버전 조합 주의: TF 2.15는 numpy 1.x 필요, tensorflowjs 4.17은 TF 2.15와 호환
+icrawler
+opencv-python-headless
+numpy==1.26.4
+tensorflow-cpu==2.15.1
+tensorflowjs==4.17.0
