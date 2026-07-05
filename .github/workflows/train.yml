@@ -1,0 +1,88 @@
+# 📱 폰에서도 돌릴 수 있는 "데이터 수집 → 학습 → 모델 배포" 자동화
+#
+# 사용법 (모바일 웹/앱 동일):
+#   GitHub 저장소 → Actions 탭 → "MBTI 모델 수집·학습" → Run workflow
+#   → 옵션 입력(그냥 기본값도 OK) → Run!
+#
+# 끝나면 학습된 모델(models/tm/)이 실행한 브랜치에 자동 커밋되고,
+# main 브랜치라면 GitHub Pages가 재배포되어 앱이 새 모델을 사용해요.
+name: MBTI 모델 수집·학습
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "인물당 다운로드 장수"
+        default: "30"
+        required: false
+      only:
+        description: "특정 유형만 (공백 구분, 예: ENFP ISTJ / 비우면 전체)"
+        default: ""
+        required: false
+      epochs:
+        description: "학습 반복 횟수"
+        default: "12"
+        required: false
+      upload_dataset:
+        description: "수집한 사진을 아티팩트로 올려 검수할지 (3일 보관)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: train-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  collect-and-train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 의존성 설치
+        run: |
+          pip install \
+            icrawler \
+            opencv-python-headless \
+            "numpy==1.26.4" \
+            "tensorflow-cpu==2.15.1" \
+            "tensorflowjs==4.17.0"
+
+      - name: 데이터 수집 (celebs.csv 기반)
+        run: |
+          ONLY=""
+          if [ -n "${{ inputs.only }}" ]; then ONLY="--only ${{ inputs.only }}"; fi
+          python tools/collect_faces.py --limit "${{ inputs.limit }}" $ONLY
+
+      - name: (선택) 수집 사진 아티팩트 업로드
+        if: ${{ inputs.upload_dataset }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset
+          path: dataset/
+          retention-days: 3
+
+      - name: 모델 학습 + TF.js 내보내기
+        run: python tools/train_model.py --epochs "${{ inputs.epochs }}"
+
+      - name: 학습된 모델 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add models/tm
+          if git diff --cached --quiet; then
+            echo "모델 변경 없음 — 커밋 생략"
+          else
+            git commit -m "chore: 학습된 MBTI 모델 갱신 (Actions 자동 커밋)"
+            git push
+          fi
