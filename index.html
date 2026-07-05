@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>몽글몽글 얼굴 MBTI 🫧</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="sky">
+    <span class="cloud c1">☁️</span>
+    <span class="cloud c2">☁️</span>
+    <span class="cloud c3">🫧</span>
+    <span class="cloud c4">✨</span>
+    <span class="cloud c5">🌸</span>
+  </div>
+
+  <header class="top">
+    <h1 class="title">몽글몽글 얼굴 MBTI <span class="wiggle">🫧</span></h1>
+    <p class="subtitle">카메라를 켜고 얼굴을 보여주면 실시간으로 성격을 알려줄게요!</p>
+  </header>
+
+  <main class="stage">
+    <div class="camera-wrap" id="cameraWrap">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+
+      <div class="hint" id="startHint">
+        <div class="hint-emoji">🥰</div>
+        <button id="startBtn" class="start-btn">카메라 켜기</button>
+        <p class="hint-text">얼굴을 화면 가운데에 맞춰주세요</p>
+      </div>
+
+      <div class="loading" id="loading" hidden>
+        <div class="spinner">🌀</div>
+        <p>얼굴 인식 준비 중...</p>
+      </div>
+    </div>
+
+    <div class="result-card" id="resultCard" hidden>
+      <div class="result-emoji" id="resultEmoji">✨</div>
+      <div class="result-type" id="resultType">----</div>
+      <div class="result-nick" id="resultNick">당신의 얼굴은...</div>
+      <div class="result-desc" id="resultDesc"></div>
+      <div class="bars" id="bars"></div>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <p>재미로 보는 얼굴 관상 MBTI 🎈 · 사진은 저장되지 않고 브라우저에서만 처리돼요</p>
+  </footer>
+
+  <script src="./vendor/face-api.js"></script>
+  <script src="./mbti.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
