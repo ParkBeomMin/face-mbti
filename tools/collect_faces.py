@@ -59,9 +59,13 @@ def load_excluded(path: Path = EXCLUDED_FILE) -> set[str]:
     return out
 
 
-def load_celebs(csv_path: Path, only: set[str] | None) -> list[tuple[str, str]]:
-    """CSV에서 (MBTI, 이름) 목록을 읽는다. 형식: MBTI,이름 (헤더/주석/빈줄 허용)"""
-    rows: list[tuple[str, str]] = []
+def load_celebs(csv_path: Path, only: set[str] | None) -> list[tuple[str, str, str]]:
+    """CSV에서 (MBTI, 이름, 기준사진URL) 목록을 읽는다.
+
+    형식: MBTI,이름[,기준사진URL]  (헤더/주석/빈줄 허용, URL은 선택)
+    URL이 있으면 그 사진과 닮은 얼굴만 수집한다 (본인 확인 앵커).
+    """
+    rows: list[tuple[str, str, str]] = []
     with open(csv_path, encoding="utf-8") as f:
         for lineno, row in enumerate(csv.reader(f), 1):
             if not row or row[0].strip().startswith("#"):
@@ -71,6 +75,7 @@ def load_celebs(csv_path: Path, only: set[str] | None) -> list[tuple[str, str]]:
                 continue
             mbti = row[0].strip().upper()
             name = row[1].strip()
+            ref = row[2].strip() if len(row) > 2 else ""
             if mbti == "MBTI":  # 헤더
                 continue
             if not MBTI_RE.match(mbti):
@@ -80,7 +85,7 @@ def load_celebs(csv_path: Path, only: set[str] | None) -> list[tuple[str, str]]:
                 continue
             if only and mbti not in only:
                 continue
-            rows.append((mbti, name))
+            rows.append((mbti, name, ref))
     return rows
 
 
@@ -107,6 +112,97 @@ def download_images(name: str, limit: int, out_dir: Path) -> int:
 
 YUNET_URL = ("https://github.com/opencv/opencv_zoo/raw/main/models/"
              "face_detection_yunet/face_detection_yunet_2023mar.onnx")
+SFACE_URL = ("https://github.com/opencv/opencv_zoo/raw/main/models/"
+             "face_recognition_sface/face_recognition_sface_2021dec.onnx")
+
+
+def _download_model(url: str, filename: str) -> Path:
+    path = Path(__file__).resolve().parent / ".cache" / filename
+    if not path.exists():
+        print(f"  {filename} 모델 다운로드 중 (최초 1회)...")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        import urllib.request
+        try:
+            urllib.request.urlretrieve(url, path)
+        except Exception:
+            path.unlink(missing_ok=True)
+            raise
+    return path
+
+
+def make_recognizer():
+    """SFace 얼굴 인식기(본인 확인용). 사용 불가 환경이면 None (필터 생략)."""
+    import cv2
+
+    if not hasattr(cv2, "FaceRecognizerSF_create"):
+        print("  ⚠️ OpenCV에 얼굴 인식 모듈이 없어 본인 확인을 건너뜁니다")
+        return None
+    try:
+        model = _download_model(SFACE_URL, "sface.onnx")
+        return cv2.FaceRecognizerSF_create(str(model), "")
+    except Exception as e:
+        print(f"  ⚠️ 얼굴 인식 모델 준비 실패({e}) — 본인 확인 없이 수집합니다")
+        return None
+
+
+def face_feature(recognizer, img):
+    """얼굴 크롭 → 임베딩 벡터 (SFace 입력 112x112)."""
+    import cv2
+
+    face = cv2.resize(img, (112, 112))
+    return recognizer.feature(face)
+
+
+def cosine(a, b) -> float:
+    import numpy as np
+
+    a, b = np.ravel(a), np.ravel(b)
+    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-9))
+
+
+def identity_filter(feats: list, ref_feat=None, thr: float = 0.30) -> list[int]:
+    """'같은 인물' 얼굴들의 인덱스만 골라낸다.
+
+    - ref_feat이 있으면: 기준 사진과 닮은 것만 (수동 앵커)
+    - 없으면: 서로 가장 많이 닮은 무리(최대 클러스터)만
+      — 검색 결과의 다수는 본인이라는 가정 (합의 필터)
+    판별이 불가능하면(전부 제각각) 전체를 유지해 수집이 멈추지 않게 한다.
+    """
+    n = len(feats)
+    if n == 0:
+        return []
+    if ref_feat is not None:
+        return [i for i in range(n) if cosine(ref_feat, feats[i]) >= thr]
+    if n <= 2:
+        return list(range(n))
+    sims = [[cosine(feats[i], feats[j]) for j in range(n)] for i in range(n)]
+    counts = [sum(1 for j in range(n) if j != i and sims[i][j] >= thr) for i in range(n)]
+    anchor = max(range(n), key=lambda i: counts[i])
+    if counts[anchor] == 0:
+        return list(range(n))  # 판별 불가 → 전부 유지
+    return [i for i in range(n) if i == anchor or sims[anchor][i] >= thr]
+
+
+def fetch_reference(url: str, detector, min_face: int):
+    """기준 사진 URL을 내려받아 얼굴 크롭을 반환 (실패 시 None)."""
+    import tempfile as _tf
+    import urllib.request
+
+    import cv2
+
+    try:
+        with _tf.NamedTemporaryFile(suffix=".img", delete=False) as f:
+            tmp = Path(f.name)
+        urllib.request.urlretrieve(url, tmp)
+        img = cv2.imread(str(tmp))
+        tmp.unlink(missing_ok=True)
+        if img is None:
+            return None
+        face = crop_main_face(img, detector, min_face // 2) if detector else None
+        return face if face is not None else img
+    except Exception as e:
+        print(f"   ⚠️ 기준 사진 로드 실패({e}) — 합의 필터로 대체")
+        return None
 
 
 def make_detector():
@@ -201,11 +297,14 @@ crop_largest_face = crop_main_face
 def process_person(mbti: str, name: str, limit: int, dataset: Path,
                    crop: bool, min_face: int,
                    excluded: set[str] | None = None,
-                   min_sharpness: float = 40.0) -> tuple[int, int]:
+                   min_sharpness: float = 40.0,
+                   recognizer=None, ref_url: str = "") -> tuple[int, int]:
     """한 인물의 이미지를 다운로드하고 (크롭해서) dataset/<MBTI>/에 저장.
 
-    파일명에 사진 지문(md5 앞 8자리)을 붙여서, 관리자 페이지에서 '제외'한
-    사진(tools/excluded.txt)은 다음 수집부터 자동으로 걸러진다.
+    1) 품질 필터: 얼굴 크롭·단체사진 스킵·흐림 제거·중복/검수 제외
+    2) 본인 확인: SFace 임베딩으로 후보들을 대조해 '같은 인물' 무리만 저장
+       (celebs.csv에 기준 사진 URL이 있으면 그 사진 기준으로 대조)
+    파일명의 사진 지문(md5 앞 8자리)으로 관리자 페이지의 제외 목록과 연동된다.
     """
     import cv2
 
@@ -220,11 +319,10 @@ def process_person(mbti: str, name: str, limit: int, dataset: Path,
         tmp_dir = Path(tmp)
         downloaded = download_images(name, limit, tmp_dir)
 
-        saved = 0
+        # 1단계: 품질 필터를 통과한 후보 수집
+        candidates: list[tuple] = []  # (img, digest, bytes)
         seen: set[str] = set()
         for src in sorted(tmp_dir.iterdir()):
-            if saved >= limit:  # 목표치 달성 (후보는 2배로 받으므로)
-                break
             if src.suffix.lower() not in IMG_EXTS:
                 continue
             img = cv2.imread(str(src))
@@ -249,8 +347,26 @@ def process_person(mbti: str, name: str, limit: int, dataset: Path,
             if digest in excluded or digest in seen:  # 검수 제외분/중복 스킵
                 continue
             seen.add(digest)
+            candidates.append((img, digest, buf.tobytes()))
+
+        # 2단계: 본인 확인 (같은 인물 무리만 남김)
+        if recognizer is not None and len(candidates) >= 3:
+            ref_feat = None
+            if ref_url:
+                ref_img = fetch_reference(ref_url, detector, min_face)
+                if ref_img is not None:
+                    ref_feat = face_feature(recognizer, ref_img)
+            feats = [face_feature(recognizer, c[0]) for c in candidates]
+            keep = identity_filter(feats, ref_feat)
+            if len(keep) < len(candidates):
+                print(f"   🧑‍🤝‍🧑 본인 확인: 후보 {len(candidates)}장 중 "
+                      f"{len(candidates) - len(keep)}장은 다른 인물로 판단 → 제외")
+            candidates = [candidates[i] for i in keep]
+
+        saved = 0
+        for img, digest, data in candidates[:limit]:
             saved += 1
-            (out_dir / f"{safe}_{digest[:8]}.jpg").write_bytes(buf.tobytes())
+            (out_dir / f"{safe}_{digest[:8]}.jpg").write_bytes(data)
     return downloaded, saved
 
 
@@ -271,6 +387,8 @@ def main() -> None:
                     help="이보다 작은 얼굴/이미지는 버림 (기본 120px)")
     ap.add_argument("--min-sharpness", type=float, default=40.0,
                     help="흐릿한 사진 버림 기준 (라플라시안 분산, 0이면 끔)")
+    ap.add_argument("--no-verify", action="store_true",
+                    help="본인 확인(얼굴 대조) 필터 끄기")
     ap.add_argument("--dry-run", action="store_true", help="다운로드 없이 목록만 확인")
     args = ap.parse_args()
 
@@ -289,7 +407,7 @@ def main() -> None:
         sys.exit("수집할 인물이 없어요. CSV 내용을 확인해주세요!")
 
     by_type: dict[str, list[str]] = {}
-    for mbti, name in celebs:
+    for mbti, name, _ref in celebs:
         by_type.setdefault(mbti, []).append(name)
 
     print(f"📋 수집 대상: {len(celebs)}명 / {len(by_type)}개 유형")
@@ -311,13 +429,19 @@ def main() -> None:
     if excluded:
         print(f"🚫 검수 제외 목록: {len(excluded)}장 (tools/excluded.txt)")
 
+    recognizer = None if args.no_verify else make_recognizer()
+    if recognizer is not None:
+        print("🧑‍🤝‍🧑 본인 확인 필터 켜짐 (엉뚱한 인물 사진 자동 제거)")
+
     total_saved = 0
-    for i, (mbti, name) in enumerate(celebs, 1):
-        print(f"\n[{i}/{len(celebs)}] {mbti} · {name} 수집 중...")
+    for i, (mbti, name, ref_url) in enumerate(celebs, 1):
+        print(f"\n[{i}/{len(celebs)}] {mbti} · {name} 수집 중..."
+              + (" (기준 사진 사용)" if ref_url else ""))
         try:
             downloaded, saved = process_person(
                 mbti, name, args.limit, args.out, not args.no_crop, args.min_face,
-                excluded=excluded, min_sharpness=args.min_sharpness)
+                excluded=excluded, min_sharpness=args.min_sharpness,
+                recognizer=recognizer, ref_url=ref_url)
         except Exception as e:  # 한 명 실패해도 계속
             print(f"   ⚠️  실패: {e}")
             continue
