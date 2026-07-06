@@ -1,0 +1,21 @@
+{
+  "tfjsVersion": "4.17.0",
+  "packageName": "face-mbti/train_model",
+  "modelName": "face-mbti",
+  "imageSize": 224,
+  "trainedAt": "2026-07-06T08:39:53+00:00",
+  "labels": [
+    "ENFJ",
+    "ENTJ",
+    "ENTP",
+    "ESFJ",
+    "ESTJ",
+    "ESTP",
+    "INFJ",
+    "INFP",
+    "INTJ",
+    "INTP",
+    "ISFJ",
+    "ISTP"
+  ]
+}
