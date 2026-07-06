@@ -212,8 +212,11 @@ def fetch_reference(url: str, detector, min_face: int):
         img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
         if img is None:
             return None
-        face = crop_main_face(img, detector, min_face // 2) if detector else None
-        return face if face is not None else img
+        if detector is None:
+            return img
+        # 기준 사진에서 얼굴을 못 찾으면(로고/앨범커버 등) 앵커로 쓰지 않는다
+        # — 엉뚱한 앵커는 후보 전원을 오판해 전멸시키기 때문
+        return crop_main_face(img, detector, min_face // 2)
     except Exception as e:
         print(f"   ⚠️ 기준 사진 로드 실패({e}) — 합의 필터로 대체")
         return None
@@ -448,9 +451,14 @@ def process_person(mbti: str, name: str, limit: int, dataset: Path,
                 if ref_img is not None:
                     ref_feat = face_feature(recognizer, ref_img)
             feats = [face_feature(recognizer, c[0]) for c in candidates]
-            # 기준 사진이 있으면 더 엄격하게 (0.35), 없으면 합의 필터 (0.30)
-            keep = identity_filter(feats, ref_feat, thr=0.35 if ref_feat is not None else 0.30)
+            keep = identity_filter(feats, ref_feat, thr=0.30)
             src_note = ref_src if ref_feat is not None else "합의 필터"
+            if ref_feat is not None and len(keep) == 0:
+                # 후보 전멸은 대부분 앵커(기준 사진)가 잘못된 경우 —
+                # 진짜 사진까지 다 버리느니 합의 필터로 재시도
+                print("   ⚠️ 기준 사진과 일치하는 후보가 없어요 — 합의 필터로 재시도")
+                keep = identity_filter(feats, None, thr=0.30)
+                src_note = "합의 필터(폴백)"
             print(f"   🧑‍🤝‍🧑 본인 확인({src_note}): 후보 {len(candidates)}장 중 "
                   f"{len(candidates) - len(keep)}장 제외")
             candidates = [candidates[i] for i in keep]
