@@ -89,19 +89,79 @@ def load_celebs(csv_path: Path, only: set[str] | None) -> list[tuple[str, str, s
     return rows
 
 
-def download_images(name: str, limit: int, out_dir: Path) -> int:
-    """Bing 이미지 검색으로 인물 사진 후보를 out_dir에 다운로드한다.
+def download_images_daum(name: str, limit: int, out_dir: Path,
+                         base: str = "https://search.daum.net",
+                         img_pattern: str = "daumcdn.net") -> int:
+    """다음(Daum) 이미지 검색을 실제 브라우저(Playwright)로 돌려 수집한다.
 
-    - 한 검색어만 쓰면 Bing이 엉뚱한 결과를 주거나 수량이 부족한 경우가
-      많아서, 검색어 3종(이름/프로필/얼굴)으로 나눠 받아온다.
-      (중복 사진은 이후 단계에서 지문으로 자동 제거됨)
-    - 필터: 인물(portrait) + 대형(large) 사진 위주.
+    한국 포털이라 한국어 이름 검색 정확도가 Bing과 비교가 안 되게 좋다.
+    (Bing은 해외 서버에서 한국어 검색 시 무관한 이미지를 반환하는 문제가 있음)
     """
+    import os
+    import urllib.parse
+    import urllib.request
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return 0
+
+    urls: list[str] = []
+    try:
+        with sync_playwright() as p:
+            exe = os.environ.get("FACE_MBTI_CHROMIUM")  # 테스트용 오버라이드
+            browser = p.chromium.launch(executable_path=exe) if exe else p.chromium.launch()
+            page = browser.new_page(user_agent=BROWSER_UA, locale="ko-KR")
+            page.goto(f"{base}/search?w=img&q={urllib.parse.quote(name)}",
+                      timeout=30000, wait_until="domcontentloaded")
+            page.wait_for_timeout(2500)
+            for _ in range(4):  # 스크롤해서 결과 추가 로드
+                page.mouse.wheel(0, 4000)
+                page.wait_for_timeout(700)
+            urls = page.evaluate(
+                """(pat) => {
+                    const out = [];
+                    for (const im of document.querySelectorAll('img')) {
+                        const s = im.currentSrc || im.src || '';
+                        if (s.includes(pat) && im.naturalWidth >= 110) out.push(s);
+                    }
+                    return [...new Set(out)];
+                }""", img_pattern)
+            browser.close()
+    except Exception as e:
+        print(f"   ⚠️ 다음 이미지 검색 실패({e})")
+        return 0
+
+    saved = 0
+    for i, u in enumerate(urls[: limit * 3]):
+        try:
+            req = urllib.request.Request(
+                u, headers={"User-Agent": BROWSER_UA, "Referer": base})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                data = r.read()
+            if len(data) < 4000:  # 아이콘/깨진 응답 제외
+                continue
+            (out_dir / f"daum_{i:04d}.jpg").write_bytes(data)
+            saved += 1
+        except Exception:
+            continue
+    return saved
+
+
+def download_images(name: str, limit: int, out_dir: Path) -> int:
+    """인물 사진 후보 다운로드: 다음(한국 포털, 정확) 우선 → 부족하면 Bing 보충."""
     from icrawler.builtin import BingImageCrawler
 
+    daum = download_images_daum(name, limit, out_dir)
+    if daum:
+        print(f"   🔎 다음 이미지 검색: {daum}장")
+    if daum >= limit:
+        return daum
+
+    # Bing 보충 (ko-KR 검색어 3종, 중복은 지문 단계에서 제거)
     queries = [name, f"{name} 프로필", f"{name} 얼굴"]
     per_query = max(10, limit)
-    offset = 0
+    offset = 10000  # 다음 수집분과 파일명 충돌 방지
     for q in queries:
         crawler = BingImageCrawler(
             storage={"root_dir": str(out_dir)},
@@ -454,11 +514,10 @@ def process_person(mbti: str, name: str, limit: int, dataset: Path,
             keep = identity_filter(feats, ref_feat, thr=0.30)
             src_note = ref_src if ref_feat is not None else "합의 필터"
             if ref_feat is not None and len(keep) == 0:
-                # 후보 전멸은 대부분 앵커(기준 사진)가 잘못된 경우 —
-                # 진짜 사진까지 다 버리느니 합의 필터로 재시도
-                print("   ⚠️ 기준 사진과 일치하는 후보가 없어요 — 합의 필터로 재시도")
-                keep = identity_filter(feats, None, thr=0.30)
-                src_note = "합의 필터(폴백)"
+                # 기준 사진이 있는데 아무도 안 닮았다면 후보가 전부
+                # 다른 사람일 가능성이 높다 — 품질 우선으로 전부 버린다
+                # (다수 무리로 폴백하면 엉뚱한 인물이 통째로 저장되는 사고가 남)
+                print("   ⚠️ 기준 사진과 일치하는 후보가 0장 — 이 인물은 이번에 건너뜁니다")
             print(f"   🧑‍🤝‍🧑 본인 확인({src_note}): 후보 {len(candidates)}장 중 "
                   f"{len(candidates) - len(keep)}장 제외")
             candidates = [candidates[i] for i in keep]
