@@ -194,19 +194,22 @@ def identity_filter(feats: list, ref_feat=None, thr: float = 0.30) -> list[int]:
     return [i for i in range(n) if i == anchor or sims[anchor][i] >= thr]
 
 
+BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
+
+
 def fetch_reference(url: str, detector, min_face: int):
     """기준 사진 URL을 내려받아 얼굴 크롭을 반환 (실패 시 None)."""
-    import tempfile as _tf
     import urllib.request
 
     import cv2
+    import numpy as np
 
     try:
-        with _tf.NamedTemporaryFile(suffix=".img", delete=False) as f:
-            tmp = Path(f.name)
-        urllib.request.urlretrieve(url, tmp)
-        img = cv2.imread(str(tmp))
-        tmp.unlink(missing_ok=True)
+        req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = r.read()
+        img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
         if img is None:
             return None
         face = crop_main_face(img, detector, min_face // 2) if detector else None
@@ -214,6 +217,78 @@ def fetch_reference(url: str, detector, min_face: int):
     except Exception as e:
         print(f"   ⚠️ 기준 사진 로드 실패({e}) — 합의 필터로 대체")
         return None
+
+
+def wiki_reference_url(name: str) -> str | None:
+    """한국어 위키백과 공식 API에서 인물 대표 이미지 URL을 찾는다."""
+    import json
+    import urllib.parse
+    import urllib.request
+
+    params = urllib.parse.urlencode({
+        "action": "query", "format": "json", "generator": "search",
+        "gsrsearch": name, "gsrlimit": "3",
+        "prop": "pageimages", "piprop": "thumbnail", "pithumbsize": "600",
+    })
+    try:
+        req = urllib.request.Request(
+            f"https://ko.wikipedia.org/w/api.php?{params}",
+            headers={"User-Agent": "face-mbti-collector/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.load(r)
+        pages = (data.get("query") or {}).get("pages") or {}
+        for p in sorted(pages.values(), key=lambda x: x.get("index", 99)):
+            thumb = (p.get("thumbnail") or {}).get("source")
+            if thumb:
+                return thumb
+    except Exception:
+        pass
+    return None
+
+
+def namu_reference_url(name: str, base: str = "https://namu.wiki",
+                       img_pattern: str = "namu.wiki/i/") -> str | None:
+    """나무위키 문서에서 프로필(첫 본문) 이미지 URL을 찾는다. Playwright 필요."""
+    import os
+    import urllib.parse
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None
+    try:
+        with sync_playwright() as p:
+            exe = os.environ.get("FACE_MBTI_CHROMIUM")  # 테스트용 오버라이드
+            browser = p.chromium.launch(executable_path=exe) if exe else p.chromium.launch()
+            page = browser.new_page(user_agent=BROWSER_UA)
+            page.goto(f"{base}/w/{urllib.parse.quote(name)}",
+                      timeout=30000, wait_until="domcontentloaded")
+            page.wait_for_timeout(2000)  # 렌더링 대기
+            src = page.evaluate(
+                """(pat) => {
+                    for (const im of document.querySelectorAll('img')) {
+                        const s = im.currentSrc || im.src || '';
+                        if (s.includes(pat) && im.naturalWidth >= 150 && im.naturalHeight >= 150)
+                            return s;
+                    }
+                    return null;
+                }""", img_pattern)
+            browser.close()
+            return src
+    except Exception as e:
+        print(f"   ⚠️ 나무위키 조회 실패({e})")
+        return None
+
+
+def auto_reference_url(name: str) -> tuple[str | None, str]:
+    """기준 사진 URL 자동 탐색: 위키백과 → 나무위키 순. (url, 출처이름) 반환."""
+    url = wiki_reference_url(name)
+    if url:
+        return url, "위키백과"
+    url = namu_reference_url(name)
+    if url:
+        return url, "나무위키"
+    return None, "합의 필터"
 
 
 def make_detector():
@@ -363,15 +438,21 @@ def process_person(mbti: str, name: str, limit: int, dataset: Path,
         # 2단계: 본인 확인 (같은 인물 무리만 남김)
         if recognizer is not None and len(candidates) >= 3:
             ref_feat = None
+            ref_src = "합의 필터"
+            if not ref_url:  # 기준 사진 자동 탐색 (위키백과 → 나무위키)
+                ref_url, ref_src = auto_reference_url(name)
+            elif ref_url:
+                ref_src = "CSV 지정"
             if ref_url:
                 ref_img = fetch_reference(ref_url, detector, min_face)
                 if ref_img is not None:
                     ref_feat = face_feature(recognizer, ref_img)
             feats = [face_feature(recognizer, c[0]) for c in candidates]
-            keep = identity_filter(feats, ref_feat)
-            if len(keep) < len(candidates):
-                print(f"   🧑‍🤝‍🧑 본인 확인: 후보 {len(candidates)}장 중 "
-                      f"{len(candidates) - len(keep)}장은 다른 인물로 판단 → 제외")
+            # 기준 사진이 있으면 더 엄격하게 (0.35), 없으면 합의 필터 (0.30)
+            keep = identity_filter(feats, ref_feat, thr=0.35 if ref_feat is not None else 0.30)
+            src_note = ref_src if ref_feat is not None else "합의 필터"
+            print(f"   🧑‍🤝‍🧑 본인 확인({src_note}): 후보 {len(candidates)}장 중 "
+                  f"{len(candidates) - len(keep)}장 제외")
             candidates = [candidates[i] for i in keep]
 
         saved = 0

@@ -53,6 +53,9 @@ jobs:
       - name: 의존성 설치
         run: pip install -r tools/requirements.txt
 
+      - name: 브라우저 설치 (나무위키 기준 사진 조회용)
+        run: playwright install --with-deps chromium
+
       - name: 데이터 수집 (celebs.csv 기반)
         run: |
           ONLY=""

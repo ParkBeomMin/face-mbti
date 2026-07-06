@@ -5,3 +5,4 @@ opencv-python-headless
 numpy==1.26.4
 tensorflow-cpu==2.15.1
 tensorflowjs==4.17.0
+playwright
