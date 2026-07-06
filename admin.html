@@ -49,6 +49,8 @@
     td { padding: 3px 4px; }
     td input, td select { width: 100%; padding: 6px 8px; }
     td:first-child { width: 96px; } td:last-child { width: 40px; }
+    td.url-td { width: 32%; }
+    td.url-td input { font-size: 12px; }
     .del { background: #ffe3e8; border-radius: 10px; padding: 6px 10px; }
     /* runs */
     .run { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed #e8def0; font-size: 14px; }
@@ -255,10 +257,11 @@ async function loadModelInfo() {
 const TYPES = ["INTJ","INTP","ENTJ","ENTP","INFJ","INFP","ENFJ","ENFP","ISTJ","ISFJ","ESTJ","ESFJ","ISTP","ISFP","ESTP","ESFP"];
 let csvSha = null, csvHeaderLines = [];
 
-function rowHtml(mbti = "ENFP", name = "") {
+function rowHtml(mbti = "ENFP", name = "", ref = "") {
   const opts = TYPES.map((t) => `<option ${t === mbti ? "selected" : ""}>${t}</option>`).join("");
   return `<tr><td><select>${opts}</select></td>
-    <td><input value="${name.replace(/"/g, "&quot;")}" placeholder="이름 (검색어로 쓰여요)" /></td>
+    <td><input class="name-in" value="${name.replace(/"/g, "&quot;")}" placeholder="이름 (검색어로 쓰여요)" /></td>
+    <td class="url-td"><input class="ref-in" value="${ref.replace(/"/g, "&quot;")}" placeholder="기준 사진 URL (선택)" /></td>
     <td><button class="del" onclick="this.closest('tr').remove()">🗑</button></td></tr>`;
 }
 function addRow() { $("csvTable").insertAdjacentHTML("beforeend", rowHtml()); }
@@ -274,11 +277,12 @@ async function loadCsv() {
       const t = line.trim();
       if (!t) continue;
       if (t.startsWith("#") || t.toUpperCase().startsWith("MBTI,")) { csvHeaderLines.push(line); continue; }
-      const [mbti, ...rest] = t.split(",");
-      if (/^[EI][SN][TF][JP]$/.test(mbti.trim().toUpperCase()) && rest.length)
-        rows.push([mbti.trim().toUpperCase(), rest.join(",").trim()]);
+      const parts = t.split(",");
+      const mbti = parts[0].trim().toUpperCase();
+      if (/^[EI][SN][TF][JP]$/.test(mbti) && parts.length > 1)
+        rows.push([mbti, (parts[1] || "").trim(), (parts[2] || "").trim()]);
     }
-    $("csvTable").innerHTML = rows.map(([m, n]) => rowHtml(m, n)).join("");
+    $("csvTable").innerHTML = rows.map(([m, n, r]) => rowHtml(m, n, r)).join("");
   } catch (e) {
     setMsg("csvMsg", "목록 로드 실패: " + e.message, false);
   }
@@ -290,8 +294,9 @@ async function saveCsv() {
   let n = 0;
   for (const tr of $("csvTable").querySelectorAll("tr")) {
     const mbti = tr.querySelector("select").value;
-    const name = tr.querySelector("input").value.trim();
-    if (name) { lines.push(`${mbti},${name}`); n++; }
+    const name = tr.querySelector(".name-in").value.trim();
+    const ref = (tr.querySelector(".ref-in")?.value || "").trim();
+    if (name) { lines.push(`${mbti},${name}` + (ref ? `,${ref}` : "")); n++; }
   }
   if (!n) return setMsg("csvMsg", "인물이 한 명도 없어요!", false);
   try {
