@@ -92,21 +92,32 @@ def load_celebs(csv_path: Path, only: set[str] | None) -> list[tuple[str, str, s
 def download_images(name: str, limit: int, out_dir: Path) -> int:
     """Bing 이미지 검색으로 인물 사진 후보를 out_dir에 다운로드한다.
 
-    품질 필터를 통과 못 하는 사진이 많으므로 목표치(limit)의 2배를 받아온다.
-    filters: 얼굴 위주(face) + 대형(large) 사진만 — 단체사진/저화질을 크게 줄여줌.
+    - 한 검색어만 쓰면 Bing이 엉뚱한 결과를 주거나 수량이 부족한 경우가
+      많아서, 검색어 3종(이름/프로필/얼굴)으로 나눠 받아온다.
+      (중복 사진은 이후 단계에서 지문으로 자동 제거됨)
+    - 필터: 인물(portrait) + 대형(large) 사진 위주.
     """
     from icrawler.builtin import BingImageCrawler
 
-    crawler = BingImageCrawler(
-        storage={"root_dir": str(out_dir)},
-        downloader_threads=4,
-        log_level=40,  # ERROR만 (조용히)
-    )
-    crawler.crawl(
-        keyword=name,
-        max_num=limit * 2,
-        filters={"type": "photo", "size": "large", "people": "face"},
-    )
+    queries = [name, f"{name} 프로필", f"{name} 얼굴"]
+    per_query = max(10, limit)
+    offset = 0
+    for q in queries:
+        crawler = BingImageCrawler(
+            storage={"root_dir": str(out_dir)},
+            downloader_threads=4,
+            log_level=40,  # ERROR만 (조용히)
+        )
+        try:
+            crawler.crawl(
+                keyword=q,
+                max_num=per_query,
+                file_idx_offset=offset,
+                filters={"type": "photo", "size": "large", "people": "portrait"},
+            )
+        except Exception as e:  # 검색어 하나 실패해도 계속
+            print(f"   ⚠️ '{q}' 검색 실패: {e}")
+        offset += per_query
     return sum(1 for p in out_dir.iterdir() if p.suffix.lower() in IMG_EXTS)
 
 
