@@ -1,0 +1,5 @@
+# 수집(collect_faces.py) 전용 — TensorFlow 불필요 (가볍고 어느 플랫폼에서나 설치됨)
+icrawler
+opencv-python-headless
+numpy==1.26.4
+playwright
