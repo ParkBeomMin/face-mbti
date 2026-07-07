@@ -1,8 +1,11 @@
-# 수집(collect_faces.py) + 학습(train_model.py) 의존성
-# 버전 조합 주의: TF 2.15는 numpy 1.x 필요, tensorflowjs 4.17은 TF 2.15와 호환
+# 전체 의존성: 수집(collect_faces.py) + 학습(train_model.py)
+# 수집만 할 거면 requirements-collect.txt 를 쓰세요 (TF 불필요, 훨씬 가벼움)
+# 버전 조합 주의: TF 2.15는 Python 3.11 이하 + numpy 1.x 필요
 icrawler
 opencv-python-headless
 numpy==1.26.4
-tensorflow-cpu==2.15.1
+# Apple Silicon 맥은 tensorflow-cpu 빌드가 없어서 tensorflow 를 사용
+tensorflow-cpu==2.15.1; platform_machine != "arm64"
+tensorflow==2.15.1; platform_machine == "arm64" and sys_platform == "darwin"
 tensorflowjs==4.17.0
 playwright

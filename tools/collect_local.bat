@@ -8,11 +8,11 @@ where uv >nul 2>&1
 if %errorlevel%==0 (
   echo 📦 uv로 환경 준비 중 ^(Python 3.11^)...
   uv venv --python 3.11 .venv
-  uv pip install -r tools\requirements.txt
+  uv pip install -r tools\requirements-collect.txt
   set "RUN=.venv\Scripts\python.exe"
 ) else (
   echo 📦 pip로 의존성 설치 중... ^(주의: Python 3.11 필요 — 3.12+면 uv 설치 추천^)
-  pip install -r tools\requirements.txt
+  pip install -r tools\requirements-collect.txt
   set "RUN=python"
 )
 

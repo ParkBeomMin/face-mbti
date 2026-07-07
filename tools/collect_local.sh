@@ -7,12 +7,12 @@ cd "$(dirname "$0")/.."
 if command -v uv >/dev/null 2>&1; then
   echo "📦 uv로 환경 준비 중 (Python 3.11)..."
   uv venv --python 3.11 .venv
-  uv pip install -r tools/requirements.txt
+  uv pip install -r tools/requirements-collect.txt
   RUN=".venv/bin/python"
   "$RUN" -m playwright install chromium
 else
   echo "📦 pip로 의존성 설치 중... (⚠️ Python 3.11 필요 — 3.12+면 uv 설치를 추천: https://docs.astral.sh/uv/)"
-  pip install -r tools/requirements.txt
+  pip install -r tools/requirements-collect.txt
   playwright install chromium
   RUN="python"
 fi
