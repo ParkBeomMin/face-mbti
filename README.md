@@ -51,6 +51,25 @@ npx serve .
 기본 관상 로직 대신, [구글 티처블 머신](https://teachablemachine.withgoogle.com/)에서 직접 학습한
 모델을 쓸 수 있어요. **모델 파일만 넣으면 앱이 자동으로 인식**하고, 화면 위에 `🤖 나만의 학습 모델 사용 중` 배지가 떠요.
 
+### 💻 내 PC에서 수집하기 (가장 정확! 추천)
+
+GitHub Actions 러너는 해외 데이터센터 IP라서 한국어 인물 검색 결과가 부정확할 수 있어요.
+**내 PC(한국 IP + 진짜 브라우저)에서 수집하면 다음(Daum) 검색이 제대로 동작**해서 품질이 훨씬 좋습니다.
+
+```bash
+# Mac/Linux
+./tools/collect_local.sh              # 전체 수집
+./tools/collect_local.sh --only ENFP  # 특정 유형만
+
+# Windows: tools\collect_local.bat 더블클릭 (또는 터미널에서 옵션과 함께)
+```
+
+끝나면 `dataset/` 폴더를 탐색기로 열어 눈으로 검수하고, 둘 중 편한 방법으로 학습하세요:
+- **A. 티처블 머신 사이트**에 유형 폴더별로 드래그 업로드 → 학습 → TF.js 내보내기 → 3개 파일을 `models/tm/`에 커밋
+- **B. 로컬 학습**: `python tools/train_model.py` → `models/tm/` 커밋
+
+커밋하면 Pages가 재배포되어 앱에 바로 적용돼요. (사진 자체는 절대 커밋하지 마세요 — `dataset/`은 .gitignore에 있어요)
+
 ### 0️⃣ 학습 데이터 자동 수집 (동봉된 수집기 사용)
 
 `tools/collect_faces.py` 가 `tools/celebs.csv` 의 "MBTI,연예인" 목록을 읽어
