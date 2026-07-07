@@ -8,3 +8,4 @@ dataset/
 tools/.cache/
 __pycache__/
 *.pyc
+.venv/
