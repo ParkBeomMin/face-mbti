@@ -51,6 +51,22 @@ npx serve .
 기본 관상 로직 대신, [구글 티처블 머신](https://teachablemachine.withgoogle.com/)에서 직접 학습한
 모델을 쓸 수 있어요. **모델 파일만 넣으면 앱이 자동으로 인식**하고, 화면 위에 `🤖 나만의 학습 모델 사용 중` 배지가 떠요.
 
+### 📋 연예인 MBTI 자동 수집 (목록 만들기)
+
+인물 이름만 있으면 **나무위키에서 MBTI와 프로필 사진을 자동으로** 가져와 `tools/celebs.csv`를 채워줍니다.
+프로필 사진 URL은 사진 수집 때 "본인 확인 앵커"로 그대로 쓰여서 일석이조예요.
+
+```bash
+# Mac/Linux                              # Windows
+./tools/mbti_local.sh                    tools\mbti_local.bat
+./tools/mbti_local.sh --names 아이유 카리나   (특정 인물만)
+./tools/mbti_local.sh --dry-run          (csv 수정 없이 미리보기)
+```
+
+- 이름 목록은 `tools/seed_names.txt` 에 자유롭게 추가하세요 (나무위키 문서 제목과 같게)
+- 기존 celebs.csv 행은 보존돼요 — MBTI가 다르면 알려주기만 하고, 빈 기준 사진 URL만 채웁니다
+- 나무위키는 봇 차단이 있어 **내 PC에서 실행**을 추천해요 (CI에서는 실패할 수 있음)
+
 ### 💻 내 PC에서 수집하기 (가장 정확! 추천)
 
 GitHub Actions 러너는 해외 데이터센터 IP라서 한국어 인물 검색 결과가 부정확할 수 있어요.
