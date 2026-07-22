@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>더 루키 ⚾ 야구선수 키우기</title>
+  <meta name="description" content="지역을 고르고 고교 3년을 보낸 뒤 KBO 드래프트에 도전하는 야구선수 육성 게임" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚾</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+
+    <!-- 타이틀 -->
+    <section class="screen active" id="screen-title">
+      <div class="title-box">
+        <div class="title-ball">⚾</div>
+        <h1>더 루키</h1>
+        <p class="subtitle">야구선수 키우기</p>
+        <p class="desc">평범한 중학교 졸업생에서 KBO 1라운더까지.<br/>고교 3년, 당신의 야구 인생이 시작됩니다.</p>
+        <button class="btn btn-primary" id="btn-new">새 게임 시작</button>
+        <button class="btn btn-ghost hidden" id="btn-continue">이어하기</button>
+      </div>
+    </section>
+
+    <!-- 지역 선택 -->
+    <section class="screen" id="screen-region">
+      <h2>🗺️ 지역 선택</h2>
+      <p class="hint">어느 지역에서 야구를 시작할까요?<br/>지역에 따라 진학할 학교와 연고 구단이 달라져요.</p>
+      <div class="card-grid" id="region-list"></div>
+    </section>
+
+    <!-- 포지션 선택 -->
+    <section class="screen" id="screen-position">
+      <h2>🧤 포지션 선택</h2>
+      <p class="hint" id="position-hint"></p>
+      <div class="card-grid two" id="position-list">
+        <button class="card" data-pos="batter">
+          <span class="card-emoji">🏏</span>
+          <span class="card-title">타자</span>
+          <span class="card-desc">타격 · 파워 · 주루 · 수비를 키워<br/>안타와 홈런으로 스카우트를 사로잡아요</span>
+        </button>
+        <button class="card" data-pos="pitcher">
+          <span class="card-emoji">🔥</span>
+          <span class="card-title">투수</span>
+          <span class="card-desc">구속 · 제구 · 변화구를 갈고닦아<br/>탈삼진 쇼로 마운드를 지배해요</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 이름 입력 -->
+    <section class="screen" id="screen-name">
+      <h2>✏️ 선수 등록</h2>
+      <p class="hint" id="name-hint"></p>
+      <div class="name-box">
+        <input id="input-name" type="text" maxlength="8" placeholder="이름 입력" />
+        <button class="btn btn-ghost" id="btn-random-name">🎲 랜덤</button>
+      </div>
+      <button class="btn btn-primary" id="btn-start">입학하기</button>
+    </section>
+
+    <!-- 메인 (육성) -->
+    <section class="screen" id="screen-main">
+      <header class="hud">
+        <div class="hud-left">
+          <div class="hud-name" id="hud-name"></div>
+          <div class="hud-school" id="hud-school"></div>
+        </div>
+        <div class="hud-right">
+          <div class="hud-turn" id="hud-turn"></div>
+        </div>
+      </header>
+
+      <div class="gauges">
+        <div class="gauge">
+          <div class="gauge-label"><span>🩹 컨디션</span><span id="cond-num"></span></div>
+          <div class="bar"><div class="bar-fill cond" id="cond-bar"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label"><span>🔭 스카우트 주목도</span><span id="scout-num"></span></div>
+          <div class="bar"><div class="bar-fill scout" id="scout-bar"></div></div>
+        </div>
+      </div>
+
+      <div class="stats" id="stats-box"></div>
+
+      <div class="actions">
+        <p class="actions-title">이번 달 뭘 할까요?</p>
+        <div class="action-grid" id="action-list"></div>
+      </div>
+
+      <div class="log" id="log-box"></div>
+    </section>
+
+    <!-- 대회 -->
+    <section class="screen" id="screen-tournament">
+      <h2 id="tour-title"></h2>
+      <div class="tour-round" id="tour-round"></div>
+      <div class="tour-card" id="tour-card"></div>
+      <button class="btn btn-primary" id="btn-tour-next">다음</button>
+    </section>
+
+    <!-- 드래프트 / 엔딩 -->
+    <section class="screen" id="screen-draft">
+      <h2>🎓 KBO 신인 드래프트</h2>
+      <div class="draft-card" id="draft-card"></div>
+      <div class="draft-actions">
+        <button class="btn btn-ghost" id="btn-share">📋 결과 복사</button>
+        <button class="btn btn-primary" id="btn-restart">처음부터 다시</button>
+      </div>
+    </section>
+
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

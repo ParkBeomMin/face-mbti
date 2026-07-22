@@ -5,6 +5,9 @@
 
 <img src="https://img.shields.io/badge/재미로-보는%20관상%20MBTI-ff8fbf" />
 
+> ⚾ **보너스 게임**: 지역을 골라 고교 3년을 보내고 KBO 드래프트에 도전하는
+> 야구선수 육성 게임 [더 루키](./rookie/)도 같이 들어있어요! (GitHub Pages 배포 시 `/rookie/`로 접속)
+
 ## ✨ 특징
 
 - 🎥 **실시간 얼굴 인식** — 브라우저에서 [face-api.js](https://github.com/vladmandic/face-api)로 얼굴/표정/68개 랜드마크를 잡아요.
