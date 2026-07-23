@@ -4,6 +4,8 @@
 #    한 유형에 여러 명을 적을수록 좋아요 (줄을 추가하면 됩니다)
 # 💡 3번째 칸(선택): 확실한 본인 사진 URL(위키 프로필 등)을 넣으면
 #    그 얼굴과 닮은 사진만 수집해요. 비워두면 자동 합의 필터로 판별합니다.
+# 🔄 최신화: ./tools/mbti_local.sh --csv-names --update
+#    → 아래 전원의 MBTI·기준 사진을 PDB(커뮤니티 투표)/나무위키 실데이터로 갱신
 MBTI,이름
 INTJ,슈가
 INTJ,김연아
@@ -37,3 +39,72 @@ ESTP,화사
 ESTP,덱스
 ESFP,이영지
 ESFP,조세호
+# ---- 1차 확장 시드 (널리 인용되는 라벨 기준 · --update로 최신화 추천) ----
+INTJ,사쿠라 르세라핌
+INTJ,임시완
+INTJ,신세경
+INTJ,존박
+INTP,진 방탄소년단
+INTP,코드쿤스트
+INTP,웬디 레드벨벳
+INTP,김성규
+ENTJ,솔라
+ENTJ,지코
+ENTJ,허영지
+ENTJ,유노윤호
+ENTP,노홍철
+ENTP,유병재
+ENTP,이은지
+ENTP,박명수
+INFJ,카리나
+INFJ,최우식
+INFJ,옹성우
+INFJ,강태오
+INFP,뷔 방탄소년단
+INFP,남주혁
+INFP,백예린
+INFP,김세정
+INFP,하니 뉴진스
+INFP,혜인 뉴진스
+ENFJ,이석훈
+ENFJ,정은지
+ENFJ,하성운
+ENFJ,김태리
+ENFP,RM
+ENFP,최예나
+ENFP,다현 트와이스
+ENFP,전소미
+ENFP,미미 오마이걸
+ENFP,다니엘 뉴진스
+ISTJ,김수현
+ISTJ,이승기
+ISTJ,민지 뉴진스
+ISTJ,진성
+ISFJ,정해인
+ISFJ,도영 NCT
+ISFJ,아린 오마이걸
+ISFJ,리즈 아이브
+ESTJ,김숙
+ESTJ,소유진
+ESTJ,이장원
+ESTJ,은광
+ESFJ,조이 레드벨벳
+ESFJ,신동
+ESFJ,산다라박
+ESFJ,정형돈
+ISTP,윤아 소녀시대
+ISTP,태양 빅뱅
+ISTP,해린 뉴진스
+ISTP,가을 아이브
+ISFP,제니 블랙핑크
+ISFP,리사 블랙핑크
+ISFP,로제 블랙핑크
+ISFP,백현
+ESTP,안유진
+ESTP,육성재
+ESTP,박나래
+ESTP,김희철
+ESFP,박재범
+ESFP,붐
+ESFP,유아 오마이걸
+ESFP,김재환

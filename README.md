@@ -65,6 +65,7 @@ npx serve .
 ```
 
 - 이름 목록은 `tools/seed_names.txt` 에 자유롭게 추가하세요 (나무위키 문서 제목과 같게)
+- **전원 최신화**: `./tools/mbti_local.sh --csv-names --update` — celebs.csv의 100명 전원을 PDB/나무위키 실데이터로 갱신
 - 기존 celebs.csv 행은 보존돼요 — MBTI가 다르면 알려주기만 하고, 빈 기준 사진 URL만 채웁니다
 - 나무위키는 봇 차단이 있어 **내 PC에서 실행**을 추천해요 (CI에서는 실패할 수 있음)
 
