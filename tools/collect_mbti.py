@@ -30,8 +30,64 @@ ROOT = Path(__file__).resolve().parent.parent
 CSV_PATH = ROOT / "tools" / "celebs.csv"
 SEED_PATH = ROOT / "tools" / "seed_names.txt"
 MBTI_RE = re.compile(r"\b([EI][SN][TF][JP])(?:-[AT])?\b")
+MBTI_SET = {a + b + c + d for a in "EI" for b in "SN" for c in "TF" for d in "JP"}
 BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
+PDB_API = "https://api.personality-database.com"
+
+
+def _walk_profiles(obj, out: list) -> None:
+    """PDB API 응답(JSON)에서 {이름, MBTI, 사진} 꼴의 프로필을 관대하게 찾는다.
+
+    비공식 API라 필드 이름이 바뀔 수 있어, 키 이름을 힌트로만 쓰고
+    구조 전체를 재귀 탐색한다.
+    """
+    if isinstance(obj, dict):
+        mbti = name = img = None
+        for k, v in obj.items():
+            if not isinstance(v, str):
+                continue
+            kl = k.lower()
+            vs = v.strip().upper().split("-")[0]
+            if vs in MBTI_SET and ("personality" in kl or "mbti" in kl or kl == "type"):
+                mbti = vs
+            if ("image" in kl or "picture" in kl or "avatar" in kl) and v.startswith("http"):
+                img = img or v
+            if kl in ("mbti_profile", "profile_name", "name", "title", "alt_name", "subcategory") and not name:
+                name = v.strip()
+        if mbti and name:
+            out.append({"name": name, "mbti": mbti, "img": img})
+        for v in obj.values():
+            _walk_profiles(v, out)
+    elif isinstance(obj, list):
+        for v in obj:
+            _walk_profiles(v, out)
+
+
+def pdb_lookup(name: str, base: str = PDB_API):
+    """Personality Database에서 (MBTI, 사진URL, 매칭된이름)을 찾는다. 실패 시 (None, None, None)."""
+    import json
+    import urllib.parse
+    import urllib.request
+
+    query = urllib.parse.urlencode({"keyword": name, "limit": 10})
+    req = urllib.request.Request(
+        f"{base}/api/v1/search/top?{query}",
+        headers={"User-Agent": BROWSER_UA, "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.load(r)
+    except Exception as e:
+        raise RuntimeError(f"PDB 조회 실패: {e}")
+
+    profiles: list[dict] = []
+    _walk_profiles(data, profiles)
+    if not profiles:
+        return None, None, None
+    # 검색어가 이름에 포함된 프로필 우선, 없으면 첫 결과
+    low = name.lower()
+    best = next((p for p in profiles if low in p["name"].lower()), profiles[0])
+    return best["mbti"], best.get("img"), best["name"]
 
 
 def fetch_profile(page, name: str, base: str, img_pattern: str):
@@ -106,41 +162,67 @@ def merge_csv(found: list[tuple[str, str, str]], dry_run: bool) -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="나무위키에서 연예인 MBTI + 프로필 사진 수집")
+    ap = argparse.ArgumentParser(description="연예인 MBTI + 프로필 사진 수집 (PDB → 나무위키)")
     ap.add_argument("--names", nargs="*", help="수집할 인물 이름들 (생략 시 seed_names.txt)")
+    ap.add_argument("--source", choices=["auto", "pdb", "namu"], default="auto",
+                    help="auto: PDB 먼저, 실패 시 나무위키 (기본)")
     ap.add_argument("--base", default="https://namu.wiki", help=argparse.SUPPRESS)
+    ap.add_argument("--pdb-base", default=PDB_API, help=argparse.SUPPRESS)
     ap.add_argument("--img-pattern", default="namu.wiki/i/", help=argparse.SUPPRESS)
     ap.add_argument("--dry-run", action="store_true", help="csv 수정 없이 결과만 보기")
     args = ap.parse_args()
 
     names = load_names(args)
-    print(f"📋 {len(names)}명의 MBTI를 나무위키에서 조회합니다\n")
-
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        sys.exit("playwright가 필요해요:  pip install playwright && playwright install chromium")
+    print(f"📋 {len(names)}명의 MBTI를 조회합니다 (소스: {args.source})\n")
 
     found: list[tuple[str, str, str]] = []
     skipped: list[str] = []
-    with sync_playwright() as p:
-        exe = os.environ.get("FACE_MBTI_CHROMIUM")  # 테스트용 오버라이드
-        browser = p.chromium.launch(executable_path=exe) if exe else p.chromium.launch()
-        page = browser.new_page(user_agent=BROWSER_UA, locale="ko-KR")
-        for i, name in enumerate(names, 1):
+    browser = page = pw = None
+
+    def namu_page():
+        """나무위키가 필요할 때만 브라우저를 띄운다."""
+        nonlocal browser, page, pw
+        if page is None:
+            from playwright.sync_api import sync_playwright
+            pw = sync_playwright().start()
+            exe = os.environ.get("FACE_MBTI_CHROMIUM")  # 테스트용 오버라이드
+            browser = pw.chromium.launch(executable_path=exe) if exe else pw.chromium.launch()
+            page = browser.new_page(user_agent=BROWSER_UA, locale="ko-KR")
+        return page
+
+    for i, name in enumerate(names, 1):
+        mbti = img = None
+        src = ""
+        # 1) Personality Database (커뮤니티 투표 기반, 사진 포함)
+        if args.source in ("auto", "pdb"):
             try:
-                mbti, img = fetch_profile(page, name, args.base, args.img_pattern)
+                mbti, img, matched = pdb_lookup(name, args.pdb_base)
+                if mbti:
+                    src = f"PDB:{matched}" if matched and matched != name else "PDB"
+            except RuntimeError as e:
+                print(f"[{i}/{len(names)}] {name}: {e}")
+        # 2) 나무위키 폴백
+        if not mbti and args.source in ("auto", "namu"):
+            try:
+                mbti, img = fetch_profile(namu_page(), name, args.base, args.img_pattern)
+                if mbti:
+                    src = "나무위키"
+            except ImportError:
+                if args.source == "namu":
+                    sys.exit("playwright가 필요해요:  pip install playwright && playwright install chromium")
             except Exception as e:
-                print(f"[{i}/{len(names)}] {name}: 조회 실패 ({e})")
-                skipped.append(name)
-                continue
-            if mbti:
-                print(f"[{i}/{len(names)}] {name}: {mbti}" + (" 📷" if img else ""))
-                found.append((name, mbti, img or ""))
-            else:
-                print(f"[{i}/{len(names)}] {name}: MBTI 정보 없음 → 건너뜀")
-                skipped.append(name)
+                print(f"[{i}/{len(names)}] {name}: 나무위키 조회 실패 ({e})")
+
+        if mbti:
+            print(f"[{i}/{len(names)}] {name}: {mbti} ({src})" + (" 📷" if img else ""))
+            found.append((name, mbti, img or ""))
+        else:
+            print(f"[{i}/{len(names)}] {name}: MBTI 정보 없음 → 건너뜀")
+            skipped.append(name)
+
+    if browser is not None:
         browser.close()
+        pw.stop()
 
     print(f"\n✅ 조회 완료: {len(found)}명 확보, {len(skipped)}명 건너뜀")
     if found:

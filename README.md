@@ -53,7 +53,7 @@ npx serve .
 
 ### 📋 연예인 MBTI 자동 수집 (목록 만들기)
 
-인물 이름만 있으면 **나무위키에서 MBTI와 프로필 사진을 자동으로** 가져와 `tools/celebs.csv`를 채워줍니다.
+인물 이름만 있으면 **Personality Database(커뮤니티 투표) → 나무위키** 순으로 MBTI와 프로필 사진을 자동으로 가져와 `tools/celebs.csv`를 채워줍니다.
 프로필 사진 URL은 사진 수집 때 "본인 확인 앵커"로 그대로 쓰여서 일석이조예요.
 
 ```bash
@@ -61,6 +61,7 @@ npx serve .
 ./tools/mbti_local.sh                    tools\mbti_local.bat
 ./tools/mbti_local.sh --names 아이유 카리나   (특정 인물만)
 ./tools/mbti_local.sh --dry-run          (csv 수정 없이 미리보기)
+./tools/mbti_local.sh --source namu      (나무위키만 사용)
 ```
 
 - 이름 목록은 `tools/seed_names.txt` 에 자유롭게 추가하세요 (나무위키 문서 제목과 같게)
