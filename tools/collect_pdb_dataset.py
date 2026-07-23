@@ -36,24 +36,56 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from collect_faces import (  # noqa: E402
     BROWSER_UA, IMG_EXTS, MBTI_RE, crop_main_face, load_celebs, load_excluded,
     make_detector)
-from collect_mbti import PDB_API, _walk_profiles  # noqa: E402
+from collect_mbti import _walk_profiles  # noqa: E402
+
+PDB_WEB = "https://www.personality-database.com"
+PDB_API = "https://api.personality-database.com"
 
 
-def pdb_search(query: str, base: str, limit: int) -> list[dict]:
-    """검색어 하나로 프로필 목록 [{name, mbti, img}] 을 가져온다."""
-    import json
-    import urllib.parse
+class PdbClient:
+    """PDB는 Cloudflare가 일반 요청을 차단하므로, 실제 브라우저로 사이트를
+    한 번 방문해 통과 쿠키를 얻은 뒤 그 세션으로 API를 호출한다.
+    (탐침으로 확인한 실제 엔드포인트: /api/v2/search/top?query=&limit=&nextCursor=0)
+    """
 
-    q = urllib.parse.urlencode({"keyword": query, "limit": limit})
-    req = urllib.request.Request(
-        f"{base}/api/v1/search/top?{q}",
-        headers={"User-Agent": BROWSER_UA, "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        data = json.load(r)
-    out: list[dict] = []
-    _walk_profiles(data, out)
-    # 이미지가 있는 프로필만 (사진이 목적이므로)
-    return [p for p in out if p.get("img")]
+    def __init__(self, base_web: str = PDB_WEB, base_api: str = PDB_API):
+        import os
+
+        from playwright.sync_api import sync_playwright
+
+        self.base_api = base_api
+        self._pw = sync_playwright().start()
+        exe = os.environ.get("FACE_MBTI_CHROMIUM")  # 테스트용 오버라이드
+        launch_args = {"args": ["--disable-blink-features=AutomationControlled"]}
+        self._browser = (self._pw.chromium.launch(executable_path=exe, **launch_args)
+                         if exe else self._pw.chromium.launch(**launch_args))
+        self.page = self._browser.new_page(user_agent=BROWSER_UA, locale="en-US")
+        # Cloudflare 통과 + 세션 쿠키 확보
+        self.page.goto(f"{base_web}/search?keyword=kpop",
+                       timeout=45000, wait_until="domcontentloaded")
+        self.page.wait_for_timeout(4000)
+
+    def search(self, query: str, limit: int) -> list[dict]:
+        """프로필 목록 [{name, mbti, img}] (이미지 있는 것만)."""
+        resp = self.page.request.get(
+            f"{self.base_api}/api/v2/search/top",
+            params={"query": query, "limit": limit, "nextCursor": 0},
+            timeout=20000)
+        if resp.status != 200:
+            raise RuntimeError(f"HTTP {resp.status}")
+        out: list[dict] = []
+        _walk_profiles(resp.json(), out)
+        return [p for p in out if p.get("img")]
+
+    def fetch_image(self, url: str) -> bytes:
+        resp = self.page.request.get(url, timeout=20000)
+        if resp.status != 200:
+            raise RuntimeError(f"이미지 HTTP {resp.status}")
+        return resp.body()
+
+    def close(self) -> None:
+        self._browser.close()
+        self._pw.stop()
 
 
 def load_queries(args) -> list[str]:
@@ -71,16 +103,13 @@ def load_queries(args) -> list[str]:
     return [q for q in queries if not (q in seen or seen.add(q))]
 
 
-def save_profile_image(url: str, mbti: str, name: str, out_dir: Path,
+def save_profile_image(data: bytes, mbti: str, name: str, out_dir: Path,
                        detector, min_face: int, excluded: set[str],
                        seen_hashes: set[str]) -> bool:
-    """프로필 사진을 내려받아 얼굴 크롭 후 저장. 성공 시 True."""
+    """프로필 사진 바이트를 얼굴 크롭 후 저장. 성공 시 True."""
     import cv2
     import numpy as np
 
-    req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        data = r.read()
     img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         return False
@@ -114,7 +143,8 @@ def main() -> None:
     ap.add_argument("--limit-per-query", type=int, default=20, help="검색어당 프로필 수 (기본 20)")
     ap.add_argument("--min-face", type=int, default=100)
     ap.add_argument("--no-crop", action="store_true")
-    ap.add_argument("--base", default=PDB_API, help=argparse.SUPPRESS)
+    ap.add_argument("--base-web", default=PDB_WEB, help=argparse.SUPPRESS)
+    ap.add_argument("--base-api", default=PDB_API, help=argparse.SUPPRESS)
     args = ap.parse_args()
 
     queries = load_queries(args)
@@ -124,6 +154,7 @@ def main() -> None:
 
     detector = None if args.no_crop else make_detector()
     excluded = load_excluded()
+    client = PdbClient(args.base_web, args.base_api)
     seen_names: set[str] = set()
     seen_hashes: set[str] = set()
     counts: dict[str, int] = {}
@@ -131,7 +162,7 @@ def main() -> None:
 
     for qi, query in enumerate(queries, 1):
         try:
-            profiles = pdb_search(query, args.base, args.limit_per_query)
+            profiles = client.search(query, args.limit_per_query)
         except Exception as e:
             failed_queries += 1
             print(f"[{qi}/{len(queries)}] '{query}': 검색 실패 ({e})")
@@ -144,7 +175,8 @@ def main() -> None:
             if name in seen_names or counts.get(mbti, 0) >= args.per_type:
                 continue
             try:
-                if save_profile_image(p["img"], mbti, name, args.out,
+                data = client.fetch_image(p["img"])
+                if save_profile_image(data, mbti, name, args.out,
                                       detector, args.min_face, excluded, seen_hashes):
                     seen_names.add(name)
                     counts[mbti] = counts.get(mbti, 0) + 1
@@ -152,6 +184,7 @@ def main() -> None:
             except Exception:
                 continue
         print(f"[{qi}/{len(queries)}] '{query}': 프로필 {len(profiles)}개 중 {got}명 저장")
+    client.close()
 
     total = sum(counts.values())
     print(f"\n✅ 완료! 총 {total}명 저장 → {args.out}")
