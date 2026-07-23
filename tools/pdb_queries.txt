@@ -1,0 +1,50 @@
+# PDB 검색어 목록 — 그룹/프로그램 이름으로 검색하면 멤버 전원이 한 번에 나와요
+# 자유롭게 추가하세요 (영문 이름이 PDB 검색에 더 잘 잡힙니다)
+BTS
+BLACKPINK
+aespa
+NewJeans
+IVE
+LE SSERAFIM
+TWICE
+Red Velvet
+Girls' Generation
+ITZY
+(G)I-DLE
+MAMAMOO
+Oh My Girl
+STAYC
+NMIXX
+Kep1er
+fromis_9
+IZ*ONE
+EXO
+NCT 127
+NCT DREAM
+SEVENTEEN
+Stray Kids
+ENHYPEN
+TXT Tomorrow X Together
+ATEEZ
+SHINee
+BIGBANG
+WINNER
+iKON
+MONSTA X
+THE BOYZ
+ZEROBASEONE
+RIIZE
+ILLIT
+KISS OF LIFE
+BABYMONSTER
+2NE1
+SISTAR
+Apink
+BTOB
+INFINITE
+Wanna One
+Running Man
+Korean actor
+Korean actress
+Korean comedian
+Korean soloist
