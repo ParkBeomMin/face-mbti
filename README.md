@@ -69,6 +69,22 @@ npx serve .
 - 기존 celebs.csv 행은 보존돼요 — MBTI가 다르면 알려주기만 하고, 빈 기준 사진 URL만 채웁니다
 - 나무위키는 봇 차단이 있어 **내 PC에서 실행**을 추천해요 (CI에서는 실패할 수 있음)
 
+### 📸 PDB 원스톱 데이터셋 (인물·MBTI·사진 한 번에! 추천)
+
+[Personality Database](https://www.personality-database.com/)에서 **인물 + 커뮤니티 투표 MBTI + 프로필 사진**을
+한 번에 수집해 바로 학습 가능한 `dataset/`을 만듭니다. 프로필 사진은 **본인임이 보증**되어
+본인 확인 필터가 필요 없고, "수백 명 × 1장" 구성이라 모델이 특정 인물이 아닌 유형의 인상을 학습해요.
+
+```bash
+# Mac/Linux                                   # Windows
+./tools/pdb_dataset_local.sh                  tools\pdb_dataset_local.bat
+./tools/pdb_dataset_local.sh --per-type 60    (유형당 최대 인원)
+./tools/pdb_dataset_local.sh --queries aespa BTS   (특정 검색어만)
+```
+
+- 검색어는 `tools/pdb_queries.txt` (그룹명 위주 — 멤버 전원이 한 번에 나와요) + `celebs.csv`의 인물들
+- 수집 후 `dataset/` 검수 → 티처블 머신 업로드 또는 `train_model.py` 로컬 학습 → `models/tm/` 커밋
+
 ### 💻 내 PC에서 수집하기 (가장 정확! 추천)
 
 GitHub Actions 러너는 해외 데이터센터 IP라서 한국어 인물 검색 결과가 부정확할 수 있어요.
