@@ -36,25 +36,39 @@ BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 PDB_API = "https://api.personality-database.com"
 
 
+MBTI_TOKEN_RE = re.compile(r"\b(" + "|".join(sorted(MBTI_SET)) + r")\b")
+_NAME_KEYS = ("mbti_profile", "profile_name", "name", "title", "alt_name",
+              "subcategory", "display_name")
+_IMG_HINTS = ("image", "picture", "avatar", "pic", "img", "photo", "thumb")
+
+
 def _walk_profiles(obj, out: list) -> None:
     """PDB API 응답(JSON)에서 {이름, MBTI, 사진} 꼴의 프로필을 관대하게 찾는다.
 
-    비공식 API라 필드 이름이 바뀔 수 있어, 키 이름을 힌트로만 쓰고
-    구조 전체를 재귀 탐색한다.
+    비공식 API라 필드 이름·형식이 바뀔 수 있어:
+    - MBTI는 키 힌트(personality/mbti/type)가 있는 문자열에서 정규식으로 추출
+      ("INFP 9w8 sp/sx" 같은 합성 문자열도 처리, 이름 키는 제외)
+    - 이미지는 직접 필드 또는 한 단계 중첩된 오브젝트({pic_url: ...})까지 탐색
     """
     if isinstance(obj, dict):
         mbti = name = img = None
         for k, v in obj.items():
-            if not isinstance(v, str):
-                continue
             kl = k.lower()
-            vs = v.strip().upper().split("-")[0]
-            if vs in MBTI_SET and ("personality" in kl or "mbti" in kl or kl == "type"):
-                mbti = vs
-            if ("image" in kl or "picture" in kl or "avatar" in kl) and v.startswith("http"):
-                img = img or v
-            if kl in ("mbti_profile", "profile_name", "name", "title", "alt_name", "subcategory") and not name:
-                name = v.strip()
+            if isinstance(v, str):
+                if (not mbti and kl not in _NAME_KEYS
+                        and ("personality" in kl or "mbti" in kl or "type" in kl)):
+                    m = MBTI_TOKEN_RE.search(v.upper())
+                    if m:
+                        mbti = m.group(1)
+                if not img and any(h in kl for h in _IMG_HINTS) and v.startswith("http"):
+                    img = v
+                if not name and kl in _NAME_KEYS and v.strip():
+                    name = v.strip()
+            elif isinstance(v, dict) and not img and any(h in kl for h in _IMG_HINTS):
+                for vv in v.values():  # 중첩 이미지 오브젝트
+                    if isinstance(vv, str) and vv.startswith("http"):
+                        img = vv
+                        break
         if mbti and name:
             out.append({"name": name, "mbti": mbti, "img": img})
         for v in obj.values():
