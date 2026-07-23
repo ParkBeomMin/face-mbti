@@ -73,6 +73,7 @@ class PdbClient:
             timeout=20000)
         if resp.status != 200:
             raise RuntimeError(f"HTTP {resp.status}")
+        self.last_raw = resp.text()[:900]  # 파싱 0건일 때 형식 확인용
         out: list[dict] = []
         _walk_profiles(resp.json(), out)
         return [p for p in out if p.get("img")]
@@ -142,6 +143,8 @@ def main() -> None:
     ap.add_argument("--per-type", type=int, default=60, help="유형당 최대 인원 (기본 60)")
     ap.add_argument("--limit-per-query", type=int, default=20, help="검색어당 프로필 수 (기본 20)")
     ap.add_argument("--min-face", type=int, default=100)
+    ap.add_argument("--delay", type=float, default=1.5,
+                    help="검색 간 대기 초 (속도 제한 예방, 기본 1.5)")
     ap.add_argument("--no-crop", action="store_true")
     ap.add_argument("--base-web", default=PDB_WEB, help=argparse.SUPPRESS)
     ap.add_argument("--base-api", default=PDB_API, help=argparse.SUPPRESS)
@@ -160,15 +163,32 @@ def main() -> None:
     counts: dict[str, int] = {}
     failed_queries = 0
 
+    import time
+
+    debug_shown = False
     for qi, query in enumerate(queries, 1):
-        try:
-            profiles = client.search(query, args.limit_per_query)
-        except Exception as e:
-            failed_queries += 1
-            print(f"[{qi}/{len(queries)}] '{query}': 검색 실패 ({e})")
+        profiles = None
+        for attempt in (1, 2):
+            try:
+                profiles = client.search(query, args.limit_per_query)
+                break
+            except Exception as e:
+                if "429" in str(e) and attempt == 1:
+                    print(f"[{qi}/{len(queries)}] '{query}': 속도 제한(429) — 25초 쉬었다 재시도")
+                    time.sleep(25)
+                    continue
+                failed_queries += 1
+                print(f"[{qi}/{len(queries)}] '{query}': 검색 실패 ({e})")
+                break
+        if profiles is None:
             if failed_queries >= 5 and failed_queries == qi:
                 sys.exit("연속 실패 — PDB API 접근이 막힌 것 같아요. 네트워크/응답 형식을 확인해주세요.")
+            time.sleep(args.delay)
             continue
+        if not profiles and not debug_shown and getattr(client, "last_raw", ""):
+            # 200인데 파싱 0건 — 응답 형식이 바뀐 경우를 대비해 원문 샘플 출력
+            debug_shown = True
+            print(f"   ⓘ 응답 샘플(파싱 0건): {client.last_raw}")
         got = 0
         for p in profiles:
             name, mbti = p["name"], p["mbti"]
@@ -184,12 +204,15 @@ def main() -> None:
             except Exception:
                 continue
         print(f"[{qi}/{len(queries)}] '{query}': 프로필 {len(profiles)}개 중 {got}명 저장")
+        time.sleep(args.delay)  # 속도 제한 예방
     client.close()
 
     total = sum(counts.values())
     print(f"\n✅ 완료! 총 {total}명 저장 → {args.out}")
     for t in sorted(counts):
         print(f"   {t}: {counts[t]}명")
+    if total == 0:
+        sys.exit("수집 결과가 0명이에요 — 위의 응답 샘플/오류를 확인해주세요.")
     print("\n다음 단계: dataset/ 검수 → 티처블 머신 또는 python tools/train_model.py")
 
 
