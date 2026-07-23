@@ -37,38 +37,65 @@ PDB_API = "https://api.personality-database.com"
 
 
 MBTI_TOKEN_RE = re.compile(r"\b(" + "|".join(sorted(MBTI_SET)) + r")\b")
-_NAME_KEYS = ("mbti_profile", "profile_name", "name", "title", "alt_name",
-              "subcategory", "display_name")
+# 우선순위 순서 (subcategory("K-pop" 등)가 실제 이름을 가리지 않도록 뒤에)
+_NAME_KEYS = ("name", "mbti_profile", "profile_name", "title", "display_name",
+              "alt_name", "subcategory")
 _IMG_HINTS = ("image", "picture", "avatar", "pic", "img", "photo", "thumb")
 
 
-def _walk_profiles(obj, out: list) -> None:
-    """PDB API 응답(JSON)에서 {이름, MBTI, 사진} 꼴의 프로필을 관대하게 찾는다.
+def _extract_mbti_from(value) -> str | None:
+    """문자열 또는 dict/list 안의 문자열들에서 MBTI 토큰을 찾는다."""
+    if isinstance(value, str):
+        m = MBTI_TOKEN_RE.search(value.upper())
+        return m.group(1) if m else None
+    if isinstance(value, dict):
+        for vv in value.values():
+            got = _extract_mbti_from(vv)
+            if got:
+                return got
+    if isinstance(value, list):
+        for vv in value:
+            got = _extract_mbti_from(vv)
+            if got:
+                return got
+    return None
 
-    비공식 API라 필드 이름·형식이 바뀔 수 있어:
-    - MBTI는 키 힌트(personality/mbti/type)가 있는 문자열에서 정규식으로 추출
-      ("INFP 9w8 sp/sx" 같은 합성 문자열도 처리, 이름 키는 제외)
-    - 이미지는 직접 필드 또는 한 단계 중첩된 오브젝트({pic_url: ...})까지 탐색
+
+def _walk_profiles(obj, out: list) -> None:
+    """PDB API 응답(JSON)에서 {이름, MBTI, 사진} 꼴의 프로필을 찾는다.
+
+    실제 v2 응답 기준 (run #11 로그에서 확인):
+      {"name": "RM (BTS)", "image": {"picURL": "https://..."},
+       "personalities": [{"system": "Four Letter", "personality": "INFJ"},
+                         {"system": "Enneagram", "personality": "4w5"}], ...}
+    - MBTI: personalities 배열(커뮤니티 투표) 우선, mbti/personality/type
+      힌트가 있는 문자열·중첩 구조에서 정규식 추출 (엔네아그램 "4w5"는 미매칭)
+    - 이미지: image 계열 키의 직접 문자열 또는 중첩 오브젝트({picURL})
+    - 이름: name > mbti_profile > ... > subcategory 우선순위 (오인 방지)
     """
     if isinstance(obj, dict):
-        mbti = name = img = None
+        mbti = img = None
+        names: dict[str, str] = {}
         for k, v in obj.items():
             kl = k.lower()
             if isinstance(v, str):
                 if (not mbti and kl not in _NAME_KEYS
                         and ("personality" in kl or "mbti" in kl or "type" in kl)):
-                    m = MBTI_TOKEN_RE.search(v.upper())
-                    if m:
-                        mbti = m.group(1)
+                    mbti = _extract_mbti_from(v)
                 if not img and any(h in kl for h in _IMG_HINTS) and v.startswith("http"):
                     img = v
-                if not name and kl in _NAME_KEYS and v.strip():
-                    name = v.strip()
-            elif isinstance(v, dict) and not img and any(h in kl for h in _IMG_HINTS):
-                for vv in v.values():  # 중첩 이미지 오브젝트
-                    if isinstance(vv, str) and vv.startswith("http"):
-                        img = vv
-                        break
+                if kl in _NAME_KEYS and v.strip() and kl not in names:
+                    names[kl] = v.strip()
+            elif isinstance(v, (dict, list)):
+                if not mbti and ("personalit" in kl or "mbti" in kl):
+                    mbti = _extract_mbti_from(v)
+                if (not img and isinstance(v, dict)
+                        and any(h in kl for h in _IMG_HINTS)):
+                    for vv in v.values():  # 중첩 이미지 오브젝트 {picURL: ...}
+                        if isinstance(vv, str) and vv.startswith("http"):
+                            img = vv
+                            break
+        name = next((names[k] for k in _NAME_KEYS if k in names), None)
         if mbti and name:
             out.append({"name": name, "mbti": mbti, "img": img})
         for v in obj.values():
