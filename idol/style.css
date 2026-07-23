@@ -1,0 +1,53 @@
+/* 더 트레이니 — 네온 퍼플/핑크 테마 (grow/base.css 위에 덮어씀) */
+:root {
+  --bg: #150e1f;
+  --bg2: #201631;
+  --field: #2a1c42;
+  --line: #4b3070;
+  --cream: #f7eefc;
+  --accent: #ff8fc8;
+  --accent2: #ff5c7a;
+  --sky: #b79cff;
+  --text: #f3ecfa;
+  --dim: #a795c0;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -10%, #34204f 0%, transparent 60%),
+    var(--bg);
+}
+
+.title-box h1 { color: var(--accent); }
+
+.btn-primary {
+  background: linear-gradient(180deg, #ffb1d8, var(--accent));
+  color: #59103a;
+  box-shadow: 0 4px 0 #b25287;
+}
+
+.bar-fill.scout { background: linear-gradient(90deg, #ffc2e0, var(--accent)); }
+.bar-fill.stat { background: linear-gradient(90deg, #d3c2ff, var(--sky)); }
+
+.tag { background: rgba(255, 143, 200, 0.12); color: var(--accent); }
+
+.card-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+
+.series-link {
+  display: block;
+  margin-top: 18px;
+  color: var(--dim);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.series-link:hover { color: var(--sky); }
+
+.draft-card {
+  background: linear-gradient(180deg, #33204e, #221338);
+  border-color: #5c3b8a;
+}
+.draft-summary { border-color: #5c3b8a; }
+
+@media (max-width: 380px) {
+  .card-grid.three { grid-template-columns: 1fr; }
+}

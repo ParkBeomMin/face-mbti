@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>키우기 시리즈 🎮</title>
+  <meta name="description" content="한 판에 5분, 브라우저에서 즐기는 인생 육성 게임 시리즈" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="base.css" />
+  <style>
+    :root {
+      --bg: #101321;
+      --bg2: #181c30;
+      --field: #202541;
+      --line: #363e6b;
+      --accent: #ffd166;
+      --sky: #8fb8ff;
+      --text: #eef0fa;
+      --dim: #9aa3c7;
+    }
+    body {
+      background:
+        radial-gradient(ellipse 120% 60% at 50% -10%, #232a4d 0%, transparent 60%),
+        var(--bg);
+    }
+    .hub-head { text-align: center; padding: 7vh 0 26px; }
+    .hub-head .title-ball { font-size: 3.2rem; }
+    .hub-head h1 { font-size: 2.6rem; color: var(--accent); text-shadow: 0 4px 0 rgba(0,0,0,.35); }
+    .hub-head p { color: var(--dim); margin-top: 8px; line-height: 1.6; }
+    a.card { text-decoration: none; }
+    .card.soon { opacity: .45; cursor: default; }
+    .card.soon:hover { transform: none; border-color: var(--line); }
+    .badge {
+      font-size: .68rem; border-radius: 99px; padding: 2px 10px;
+      background: rgba(110, 231, 160, .15); color: #6ee7a0;
+    }
+    .card.soon .badge { background: rgba(255,255,255,.08); color: var(--dim); }
+  </style>
+</head>
+<body>
+  <main id="app">
+    <header class="hub-head">
+      <div class="title-ball">🎮</div>
+      <h1>키우기 시리즈</h1>
+      <p>한 판에 5분, 인생 육성 시뮬레이션.<br/>당신의 루키를 정상까지 키워보세요.</p>
+    </header>
+
+    <div class="card-grid">
+      <a class="card" href="../rookie/">
+        <span class="card-emoji">⚾</span>
+        <span class="card-title">더 루키</span>
+        <span class="card-sub">야구선수 키우기</span>
+        <span class="card-desc">지역 명문고 입학부터<br/>KBO 드래프트 지명까지</span>
+        <span class="card-tags"><span class="badge">플레이 가능</span></span>
+      </a>
+      <a class="card" href="../idol/">
+        <span class="card-emoji">🎤</span>
+        <span class="card-title">더 트레이니</span>
+        <span class="card-sub">아이돌 연습생 키우기</span>
+        <span class="card-desc">소속사 연습실 3년,<br/>데뷔 서바이벌 생존까지</span>
+        <span class="card-tags"><span class="badge">플레이 가능</span></span>
+      </a>
+      <span class="card soon">
+        <span class="card-emoji">💻</span>
+        <span class="card-title">더 커밋</span>
+        <span class="card-sub">개발자 키우기</span>
+        <span class="card-desc">부트캠프에서 시작해<br/>꿈의 회사 입사까지</span>
+        <span class="card-tags"><span class="badge">준비 중</span></span>
+      </span>
+      <span class="card soon">
+        <span class="card-emoji">🍜</span>
+        <span class="card-title">더 셰프</span>
+        <span class="card-sub">요리사 키우기</span>
+        <span class="card-desc">주방 막내에서<br/>미쉐린 스타까지</span>
+        <span class="card-tags"><span class="badge">준비 중</span></span>
+      </span>
+      <span class="card soon">
+        <span class="card-emoji">📺</span>
+        <span class="card-title">더 스트리머</span>
+        <span class="card-sub">스트리머 키우기</span>
+        <span class="card-desc">시청자 0명 방송에서<br/>100만 구독까지</span>
+        <span class="card-tags"><span class="badge">준비 중</span></span>
+      </span>
+      <span class="card soon">
+        <span class="card-emoji">⚽</span>
+        <span class="card-title">더 윙어</span>
+        <span class="card-sub">축구선수 키우기</span>
+        <span class="card-desc">유스팀 연습생에서<br/>유럽 빅리그 이적까지</span>
+        <span class="card-tags"><span class="badge">준비 중</span></span>
+      </span>
+    </div>
+  </main>
+</body>
+</html>

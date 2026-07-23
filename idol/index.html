@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>더 트레이니 🎤 아이돌 연습생 키우기</title>
+  <meta name="description" content="소속사를 고르고 연습생 3년을 버텨 데뷔 서바이벌에 도전하는 아이돌 육성 게임" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../grow/base.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+
+    <!-- 타이틀 -->
+    <section class="screen active" id="screen-title">
+      <div class="title-box">
+        <div class="title-ball">🎤</div>
+        <h1>더 트레이니</h1>
+        <p class="subtitle">아이돌 연습생 키우기</p>
+        <p class="desc">오디션에 합격한 평범한 연습생에서 데뷔조까지.<br/>연습실 3년, 당신의 무대가 시작됩니다.</p>
+        <button class="btn btn-primary" id="btn-new">새 게임 시작</button>
+        <button class="btn btn-ghost hidden" id="btn-continue">이어하기</button>
+        <a class="series-link" href="../grow/">🎮 키우기 시리즈 더 보기</a>
+      </div>
+    </section>
+
+    <!-- 소속사 선택 -->
+    <section class="screen" id="screen-agency">
+      <h2>🏢 소속사 선택</h2>
+      <p class="hint">어느 기획사에서 연습생 생활을 시작할까요?<br/>회사에 따라 데뷔 확률과 성장 환경이 달라져요.</p>
+      <div class="card-grid" id="agency-list"></div>
+    </section>
+
+    <!-- 포지션 선택 -->
+    <section class="screen" id="screen-position">
+      <h2>🎯 메인 포지션</h2>
+      <p class="hint" id="position-hint"></p>
+      <div class="card-grid three" id="position-list">
+        <button class="card" data-pos="vocal">
+          <span class="card-emoji">🎤</span>
+          <span class="card-title">보컬</span>
+          <span class="card-desc">고음으로 심사위원을<br/>울리는 메인보컬</span>
+        </button>
+        <button class="card" data-pos="dance">
+          <span class="card-emoji">🕺</span>
+          <span class="card-title">댄스</span>
+          <span class="card-desc">칼군무의 중심,<br/>퍼포먼스 에이스</span>
+        </button>
+        <button class="card" data-pos="rap">
+          <span class="card-emoji">🎙️</span>
+          <span class="card-title">랩</span>
+          <span class="card-desc">자작 랩으로 무대를<br/>찢는 래퍼</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 이름 입력 -->
+    <section class="screen" id="screen-name">
+      <h2>✏️ 연습생 등록</h2>
+      <p class="hint" id="name-hint"></p>
+      <div class="name-box">
+        <input id="input-name" type="text" maxlength="8" placeholder="활동명 입력" />
+        <button class="btn btn-ghost" id="btn-random-name">🎲 랜덤</button>
+      </div>
+      <button class="btn btn-primary" id="btn-start">계약서에 사인하기</button>
+    </section>
+
+    <!-- 메인 (육성) -->
+    <section class="screen" id="screen-main">
+      <header class="hud">
+        <div class="hud-left">
+          <div class="hud-name" id="hud-name"></div>
+          <div class="hud-school" id="hud-school"></div>
+        </div>
+        <div class="hud-right">
+          <div class="hud-turn" id="hud-turn"></div>
+        </div>
+      </header>
+
+      <div class="gauges">
+        <div class="gauge">
+          <div class="gauge-label"><span>🩹 컨디션</span><span id="cond-num"></span></div>
+          <div class="bar"><div class="bar-fill cond" id="cond-bar"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label"><span>💖 팬덤 · 주목도</span><span id="scout-num"></span></div>
+          <div class="bar"><div class="bar-fill scout" id="scout-bar"></div></div>
+        </div>
+      </div>
+
+      <div class="stats" id="stats-box"></div>
+
+      <div class="actions">
+        <p class="actions-title">이번 달 뭘 연습할까요?</p>
+        <div class="action-grid" id="action-list"></div>
+      </div>
+
+      <div class="log" id="log-box"></div>
+    </section>
+
+    <!-- 쇼케이스 / 평가 / 서바이벌 -->
+    <section class="screen" id="screen-stage">
+      <h2 id="stage-title"></h2>
+      <div class="tour-round" id="stage-round"></div>
+      <div class="tour-card" id="stage-card"></div>
+      <button class="btn btn-primary" id="btn-stage-next">다음</button>
+    </section>
+
+    <!-- 엔딩 -->
+    <section class="screen" id="screen-ending">
+      <h2>✨ 데뷔 서바이벌 최종 결과</h2>
+      <div class="draft-card" id="ending-card"></div>
+      <div class="draft-actions">
+        <button class="btn btn-ghost" id="btn-share">📋 결과 복사</button>
+        <button class="btn btn-primary" id="btn-restart">처음부터 다시</button>
+      </div>
+    </section>
+
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

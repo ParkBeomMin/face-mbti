@@ -68,15 +68,6 @@ h1, h2, .card-title, .btn, .hud-name, .hud-turn, .actions-title, .tour-round {
 .subtitle { font-size: 1.15rem; color: var(--sky); margin-top: 2px; }
 .desc { color: var(--dim); line-height: 1.6; margin: 20px 0 32px; }
 
-.series-link {
-  display: block;
-  margin-top: 18px;
-  color: var(--dim);
-  font-size: 0.85rem;
-  text-decoration: none;
-}
-.series-link:hover { color: var(--sky); }
-
 /* ---------- 공통 ---------- */
 h2 { font-size: 1.6rem; margin: 8px 0 6px; color: var(--accent); }
 .hint { color: var(--dim); line-height: 1.55; margin-bottom: 18px; }
