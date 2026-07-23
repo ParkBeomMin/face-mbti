@@ -11,9 +11,14 @@ name: MBTI 모델 수집·학습
 on:
   workflow_dispatch:
     inputs:
+      source:
+        description: "데이터 소스"
+        type: choice
+        options: [pdb, search]
+        default: pdb
       limit:
-        description: "인물당 다운로드 장수"
-        default: "30"
+        description: "pdb: 유형당 최대 인원 / search: 인물당 다운로드 장수"
+        default: "60"
         required: false
       only:
         description: "특정 유형만 (공백 구분, 예: ENFP ISTJ / 비우면 전체)"
@@ -56,11 +61,16 @@ jobs:
       - name: 브라우저 설치 (나무위키 기준 사진 조회용)
         run: playwright install --with-deps chromium
 
-      - name: 데이터 수집 (celebs.csv 기반)
+      - name: 데이터 수집
         run: |
-          ONLY=""
-          if [ -n "${{ inputs.only }}" ]; then ONLY="--only ${{ inputs.only }}"; fi
-          python tools/collect_faces.py --limit "${{ inputs.limit }}" $ONLY
+          if [ "${{ inputs.source }}" = "search" ]; then
+            ONLY=""
+            if [ -n "${{ inputs.only }}" ]; then ONLY="--only ${{ inputs.only }}"; fi
+            python tools/collect_faces.py --limit "${{ inputs.limit }}" $ONLY
+          else
+            # PDB 원스톱: 인물·MBTI·프로필사진을 한 번에 (본인 보증)
+            python tools/collect_pdb_dataset.py --per-type "${{ inputs.limit }}"
+          fi
 
       - name: (선택) 수집 사진 아티팩트 업로드
         if: ${{ inputs.upload_dataset }}
