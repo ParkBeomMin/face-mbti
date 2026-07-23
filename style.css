@@ -59,13 +59,15 @@ html, body {
   background: #ffeaf4;
   box-shadow: 0 14px 40px rgba(255, 143, 191, .35), 0 0 0 6px #fff, 0 0 0 10px var(--pink);
 }
-#video, #overlay {
+#video, #overlay, #snapshot {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
 }
 #video { transform: scaleX(-1); } /* 거울 모드는 비디오에만, 캔버스 좌표는 JS에서 반전 */
 #overlay { pointer-events: none; }
+/* 결과 확정 순간의 정지 화면 (JS에서 이미 반전해 그림) */
+#snapshot { z-index: 2; }
 
 .hint, .loading {
   position: absolute; inset: 0;
@@ -121,31 +123,37 @@ html, body {
 .bar-fill.tf { background: linear-gradient(90deg, var(--sky), var(--lav)); }
 .bar-fill.jp { background: linear-gradient(90deg, var(--lav), var(--pink)); }
 
-.retry-btn {
+/* 결과 카드 버튼들 (공유 / 다시 측정) */
+.result-actions {
   margin-top: 18px;
-  font-family: inherit; font-size: 17px; color: #4c7a63;
-  background: linear-gradient(135deg, var(--mint), #a5e6c3);
+  display: flex; flex-wrap: wrap; gap: 10px;
+  justify-content: center;
+}
+.share-btn, .retry-btn {
+  font-family: inherit; font-size: 17px;
   border: none; border-radius: 999px;
-  padding: 11px 26px; cursor: pointer;
-  box-shadow: 0 6px 16px rgba(120, 200, 160, .45);
+  padding: 11px 22px; cursor: pointer;
   transition: transform .15s ease;
 }
-.retry-btn:hover { transform: translateY(-2px) scale(1.04); }
-.retry-btn:active { transform: scale(.96); }
+.share-btn {
+  color: #fff;
+  background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+  box-shadow: 0 6px 16px rgba(255, 143, 191, .45);
+}
+.retry-btn {
+  color: #4c7a63;
+  background: linear-gradient(135deg, var(--mint), #a5e6c3);
+  box-shadow: 0 6px 16px rgba(120, 200, 160, .45);
+}
+.share-btn:hover, .retry-btn:hover { transform: translateY(-2px) scale(1.04); }
+.share-btn:active, .retry-btn:active { transform: scale(.96); }
 
-/* 티처블 머신 모델 사용 중 배지 */
-.tm-badge {
-  position: absolute;
-  top: 12px; left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-  font-size: 13px;
-  color: #5a4a63;
-  background: rgba(255, 255, 255, .88);
-  border: 2px solid var(--lav);
-  border-radius: 999px;
-  padding: 5px 14px;
-  box-shadow: 0 4px 12px rgba(150, 130, 200, .25);
+/* 결과 안내 문구 (학습 데이터 기반) */
+.result-note {
+  margin: 14px 2px 0;
+  font-family: "Gaegu", sans-serif;
+  font-size: 13px; line-height: 1.4;
+  color: var(--ink); opacity: .7;
 }
 
 /* 결과 확정 축하 컨페티 */
