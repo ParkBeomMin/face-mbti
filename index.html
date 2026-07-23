@@ -27,7 +27,7 @@
     <div class="camera-wrap" id="cameraWrap">
       <video id="video" autoplay muted playsinline></video>
       <canvas id="overlay"></canvas>
-      <div class="tm-badge" id="tmBadge" hidden>🤖 나만의 학습 모델 사용 중</div>
+      <canvas id="snapshot" hidden></canvas>
 
       <div class="hint" id="startHint">
         <div class="hint-emoji">🥰</div>
@@ -47,7 +47,11 @@
       <div class="result-nick" id="resultNick">당신의 얼굴은...</div>
       <div class="result-desc" id="resultDesc"></div>
       <div class="bars" id="bars"></div>
-      <button id="retryBtn" class="retry-btn" hidden>다시 측정하기 🔄</button>
+      <div class="result-actions" id="resultActions" hidden>
+        <button id="shareBtn" class="share-btn">결과 공유하기 💌</button>
+        <button id="retryBtn" class="retry-btn">다시 측정하기 🔄</button>
+      </div>
+      <p class="result-note" id="resultNote" hidden>✨ 직접 모은 연예인 사진으로 학습한 모델이 분석한 결과예요</p>
     </div>
   </main>
 
