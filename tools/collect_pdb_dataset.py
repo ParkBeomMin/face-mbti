@@ -142,7 +142,8 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "dataset")
     ap.add_argument("--per-type", type=int, default=60, help="유형당 최대 인원 (기본 60)")
     ap.add_argument("--limit-per-query", type=int, default=20, help="검색어당 프로필 수 (기본 20)")
-    ap.add_argument("--min-face", type=int, default=100)
+    ap.add_argument("--min-face", type=int, default=72,
+                    help="얼굴 최소 크기 px (PDB 프로필 썸네일은 작아서 낮게, 기본 72)")
     ap.add_argument("--delay", type=float, default=1.5,
                     help="검색 간 대기 초 (속도 제한 예방, 기본 1.5)")
     ap.add_argument("--no-crop", action="store_true")

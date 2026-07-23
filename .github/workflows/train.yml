@@ -94,7 +94,7 @@ jobs:
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" dataset-preview
 
       - name: 모델 학습 + TF.js 내보내기
-        run: python tools/train_model.py --epochs "${{ inputs.epochs }}"
+        run: python tools/train_model.py --epochs "${{ inputs.epochs }}" --min-images 8
 
       - name: 학습된 모델 커밋
         run: |
