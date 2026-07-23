@@ -3,17 +3,21 @@
   "packageName": "face-mbti/train_model",
   "modelName": "face-mbti",
   "imageSize": 224,
-  "trainedAt": "2026-07-23T06:02:22+00:00",
+  "trainedAt": "2026-07-23T06:40:12+00:00",
   "labels": [
+    "ENFJ",
     "ENFP",
+    "ENTJ",
     "ENTP",
     "ESFJ",
     "ESFP",
+    "ESTJ",
     "ESTP",
     "INFJ",
     "INFP",
     "ISFJ",
     "ISFP",
-    "ISTJ"
+    "ISTJ",
+    "ISTP"
   ]
 }
