@@ -24,6 +24,7 @@ const elBars = document.getElementById("bars");
 const resultActions = document.getElementById("resultActions");
 const retryBtn = document.getElementById("retryBtn");
 const shareBtn = document.getElementById("shareBtn");
+const saveBtn = document.getElementById("saveBtn");
 const resultNote = document.getElementById("resultNote");
 const snapshot = document.getElementById("snapshot");
 const sctx = snapshot.getContext("2d");
@@ -160,8 +161,9 @@ retryBtn.addEventListener("click", () => {
   sctx.clearRect(0, 0, snapshot.width, snapshot.height);
 });
 
-/* ---------- 결과 공유하기 ---------- */
+/* ---------- 결과 공유 / 저장 ---------- */
 shareBtn.addEventListener("click", shareResult);
+saveBtn.addEventListener("click", saveResult);
 
 /* ---------- 메인 루프 ---------- */
 const detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 });
@@ -402,39 +404,57 @@ function composeShareBlob(info) {
   });
 }
 
+const SHARE_URL = "https://parkbeommin.github.io/face-mbti/";
+
+function downloadBlob(blob, fname) {
+  const dl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = dl;
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(dl);
+}
+
 async function shareResult() {
   if (!lockedType) return;
   const info = MBTI_INFO[lockedType];
-  const text = `내 얼굴 MBTI는 ${lockedType} ${info.emoji} (${info.nick})!\n몽글몽글 얼굴 MBTI에서 확인해보세요 🫧`;
-  const url = "https://parkbeommin.github.io/face-mbti/";
+  // 링크를 텍스트에 함께 담아 이미지 공유든 텍스트 공유든 URL이 항상 따라가게
+  const text = `내 얼굴 MBTI는 ${lockedType} ${info.emoji} (${info.nick})!\n나도 얼굴로 MBTI 확인하기 👉 ${SHARE_URL}`;
   const fname = `얼굴MBTI-${lockedType}.png`;
 
   let blob = null;
   try { blob = await composeShareBlob(info); } catch (e) { /* 폴백으로 진행 */ }
 
-  // 1) 이미지 공유 (모바일에서 카톡·인스타 등으로 바로)
+  // 1) 이미지+링크 공유 (모바일에서 카톡·인스타 등으로 바로)
   if (blob && navigator.canShare) {
     const file = new File([blob], fname, { type: "image/png" });
     if (navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: "내 얼굴 MBTI", text }); return; }
+      try { await navigator.share({ files: [file], title: "내 얼굴 MBTI", text, url: SHARE_URL }); return; }
       catch (e) { if (e.name === "AbortError") return; }
     }
   }
   // 2) 텍스트+링크 공유
   if (navigator.share) {
-    try { await navigator.share({ title: "내 얼굴 MBTI", text, url }); return; }
+    try { await navigator.share({ title: "내 얼굴 MBTI", text, url: SHARE_URL }); return; }
     catch (e) { if (e.name === "AbortError") return; }
   }
   // 3) 이미지 다운로드 (데스크톱 등)
   if (blob) {
-    const dl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = dl;
-    a.download = fname;
-    a.click();
-    URL.revokeObjectURL(dl);
+    downloadBlob(blob, fname);
   } else {
     alert("이 브라우저에서는 자동 공유가 어려워요 😢 스크린샷으로 저장해 공유해주세요!");
+  }
+}
+
+/* ---------- 사진 저장하기 ---------- */
+async function saveResult() {
+  if (!lockedType) return;
+  const info = MBTI_INFO[lockedType];
+  try {
+    const blob = await composeShareBlob(info);
+    downloadBlob(blob, `얼굴MBTI-${lockedType}.png`);
+  } catch (e) {
+    alert("사진을 저장하지 못했어요 😢 스크린샷으로 저장해주세요!");
   }
 }
 
