@@ -419,12 +419,17 @@ function shareKakao() {
   }
   if (!Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
   const info = MBTI_INFO[lockedType];
+  const link = { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL };
   try {
     Kakao.Share.sendDefault({
-      objectType: "text",
-      text: `내 얼굴 MBTI는 ${lockedType} ${info.emoji}\n(${info.nick})\n\n나도 얼굴로 성격 알아보기 🫧`,
-      link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL },
-      buttonTitle: "나도 해보기",
+      objectType: "feed",
+      content: {
+        title: `내 얼굴 MBTI는 ${lockedType} ${info.emoji}`,
+        description: `${info.nick} · 나도 얼굴로 성격 알아보기 🫧`,
+        imageUrl: SHARE_URL + "og.png",
+        link,
+      },
+      buttons: [{ title: "나도 해보기", link }],
     });
   } catch (e) {
     alert("카카오 공유에 실패했어요 😢\n(카카오 개발자 콘솔에 사이트 도메인이 등록됐는지 확인해주세요)");
