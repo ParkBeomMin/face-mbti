@@ -129,10 +129,10 @@ html, body {
   display: flex; flex-wrap: wrap; gap: 10px;
   justify-content: center;
 }
-.share-btn, .retry-btn {
-  font-family: inherit; font-size: 17px;
+.share-btn, .save-btn, .retry-btn {
+  font-family: inherit; font-size: 16px;
   border: none; border-radius: 999px;
-  padding: 11px 22px; cursor: pointer;
+  padding: 11px 20px; cursor: pointer;
   transition: transform .15s ease;
 }
 .share-btn {
@@ -140,13 +140,18 @@ html, body {
   background: linear-gradient(135deg, var(--pink), var(--pink-deep));
   box-shadow: 0 6px 16px rgba(255, 143, 191, .45);
 }
+.save-btn {
+  color: #6a5a9c;
+  background: linear-gradient(135deg, var(--lav), #c6bbff);
+  box-shadow: 0 6px 16px rgba(150, 130, 200, .4);
+}
 .retry-btn {
   color: #4c7a63;
   background: linear-gradient(135deg, var(--mint), #a5e6c3);
   box-shadow: 0 6px 16px rgba(120, 200, 160, .45);
 }
-.share-btn:hover, .retry-btn:hover { transform: translateY(-2px) scale(1.04); }
-.share-btn:active, .retry-btn:active { transform: scale(.96); }
+.share-btn:hover, .save-btn:hover, .retry-btn:hover { transform: translateY(-2px) scale(1.04); }
+.share-btn:active, .save-btn:active, .retry-btn:active { transform: scale(.96); }
 
 /* 결과 안내 문구 (학습 데이터 기반) */
 .result-note {
