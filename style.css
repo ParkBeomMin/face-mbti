@@ -175,8 +175,7 @@ html, body {
   100% { transform: translateY(-105vh) rotate(340deg); opacity: 0; }
 }
 
-.foot { position: relative; z-index: 1; text-align: center; padding: 10px 16px 26px; font-size: 13px; opacity: .7; }
-.admin-link { color: var(--pink-deep); text-decoration: none; }
+.foot { position: relative; z-index: 1; text-align: center; padding: 10px 16px 26px; font-size: 13px; opacity: .7; line-height: 1.6; }
 
 @media (max-width: 720px) {
   .stage { gap: 16px; }
