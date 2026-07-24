@@ -175,6 +175,14 @@ html, body {
   100% { transform: translateY(-105vh) rotate(340deg); opacity: 0; }
 }
 
+/* 하단 띠배너 광고 자리 (승인 전엔 비어 있어요) */
+.ad-banner {
+  position: relative; z-index: 1;
+  max-width: 728px; margin: 14px auto 0; padding: 0 16px;
+  text-align: center; min-height: 60px; overflow: hidden;
+}
+.ad-banner ins { display: block; }
+
 .foot { position: relative; z-index: 1; text-align: center; padding: 10px 16px 26px; font-size: 13px; opacity: .7; line-height: 1.6; }
 
 @media (max-width: 720px) {
