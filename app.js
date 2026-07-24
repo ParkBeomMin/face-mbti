@@ -379,7 +379,8 @@ function composeShareBlob(info) {
   return new Promise((resolve, reject) => {
     const W = snapshot.width, H = snapshot.height;
     if (!W || !H) return reject(new Error("정지 화면이 없어요"));
-    const band = Math.round(W * 0.26);
+    // 캡션 밴드: 카톡 등은 이미지만 보내고 URL을 버리므로, 링크를 이미지에 새김
+    const band = Math.round(W * 0.34);
     const c = document.createElement("canvas");
     c.width = W;
     c.height = H + band;
@@ -392,14 +393,17 @@ function composeShareBlob(info) {
     const cx = W / 2;
     g.textAlign = "center";
     g.fillStyle = info.color;
-    g.font = `${Math.round(band * 0.34)}px "Jua", system-ui, sans-serif`;
-    g.fillText(`${info.emoji} ${lockedType}`, cx, H + band * 0.42);
+    g.font = `${Math.round(band * 0.26)}px "Jua", system-ui, sans-serif`;
+    g.fillText(`${info.emoji} ${lockedType}`, cx, H + band * 0.28);
     g.fillStyle = "#6b5b73";
-    g.font = `${Math.round(band * 0.2)}px "Jua", system-ui, sans-serif`;
-    g.fillText(info.nick, cx, H + band * 0.68);
-    g.fillStyle = "#b0a3bb";
-    g.font = `${Math.round(band * 0.15)}px "Jua", system-ui, sans-serif`;
-    g.fillText("몽글몽글 얼굴 MBTI 🫧", cx, H + band * 0.9);
+    g.font = `${Math.round(band * 0.16)}px "Jua", system-ui, sans-serif`;
+    g.fillText(info.nick, cx, H + band * 0.5);
+    g.fillStyle = "#a99bc4";
+    g.font = `${Math.round(band * 0.125)}px "Jua", system-ui, sans-serif`;
+    g.fillText("몽글몽글 얼굴 MBTI 🫧", cx, H + band * 0.7);
+    g.fillStyle = info.color;
+    g.font = `${Math.round(band * 0.13)}px "Jua", system-ui, sans-serif`;
+    g.fillText("👉 parkbeommin.github.io/face-mbti", cx, H + band * 0.9);
     c.toBlob((b) => (b ? resolve(b) : reject(new Error("이미지 생성 실패"))), "image/png");
   });
 }
