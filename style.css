@@ -129,11 +129,16 @@ html, body {
   display: flex; flex-wrap: wrap; gap: 10px;
   justify-content: center;
 }
-.share-btn, .save-btn, .retry-btn {
+.kakao-btn, .share-btn, .save-btn, .retry-btn {
   font-family: inherit; font-size: 16px;
   border: none; border-radius: 999px;
   padding: 11px 20px; cursor: pointer;
   transition: transform .15s ease;
+}
+.kakao-btn {
+  color: #3c1e1e;
+  background: #fee500;
+  box-shadow: 0 6px 16px rgba(240, 210, 0, .5);
 }
 .share-btn {
   color: #fff;
@@ -150,8 +155,8 @@ html, body {
   background: linear-gradient(135deg, var(--mint), #a5e6c3);
   box-shadow: 0 6px 16px rgba(120, 200, 160, .45);
 }
-.share-btn:hover, .save-btn:hover, .retry-btn:hover { transform: translateY(-2px) scale(1.04); }
-.share-btn:active, .save-btn:active, .retry-btn:active { transform: scale(.96); }
+.kakao-btn:hover, .share-btn:hover, .save-btn:hover, .retry-btn:hover { transform: translateY(-2px) scale(1.04); }
+.kakao-btn:active, .share-btn:active, .save-btn:active, .retry-btn:active { transform: scale(.96); }
 
 /* 결과 안내 문구 (학습 데이터 기반) */
 .result-note {

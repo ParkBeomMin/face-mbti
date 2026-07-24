@@ -19,6 +19,15 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7426857657290789"
           crossorigin="anonymous"></script>
 
+  <!-- 카카오 JavaScript SDK (공유용) -->
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
+
+  <!-- 링크 미리보기(OG) -->
+  <meta property="og:title" content="몽글몽글 얼굴 MBTI 🫧" />
+  <meta property="og:description" content="카메라로 얼굴을 비추면 실시간으로 성격 MBTI를 알려줘요!" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://parkbeommin.github.io/face-mbti/" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet" />
@@ -63,6 +72,7 @@
       <div class="result-desc" id="resultDesc"></div>
       <div class="bars" id="bars"></div>
       <div class="result-actions" id="resultActions" hidden>
+        <button id="kakaoBtn" class="kakao-btn">카카오톡 💛</button>
         <button id="shareBtn" class="share-btn">공유하기 💌</button>
         <button id="saveBtn" class="save-btn">사진 저장 📸</button>
         <button id="retryBtn" class="retry-btn">다시 측정 🔄</button>

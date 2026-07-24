@@ -25,6 +25,7 @@ const resultActions = document.getElementById("resultActions");
 const retryBtn = document.getElementById("retryBtn");
 const shareBtn = document.getElementById("shareBtn");
 const saveBtn = document.getElementById("saveBtn");
+const kakaoBtn = document.getElementById("kakaoBtn");
 const resultNote = document.getElementById("resultNote");
 const snapshot = document.getElementById("snapshot");
 const sctx = snapshot.getContext("2d");
@@ -164,6 +165,7 @@ retryBtn.addEventListener("click", () => {
 /* ---------- 결과 공유 / 저장 ---------- */
 shareBtn.addEventListener("click", shareResult);
 saveBtn.addEventListener("click", saveResult);
+kakaoBtn.addEventListener("click", shareKakao);
 
 /* ---------- 메인 루프 ---------- */
 const detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 });
@@ -405,6 +407,29 @@ function composeShareBlob(info) {
 }
 
 const SHARE_URL = "https://parkbeommin.github.io/face-mbti/";
+const KAKAO_JS_KEY = "cdeb69a7e00cd6d58c9f17d15ab53893";  // 공개 클라이언트 키(도메인 화이트리스트로 보호)
+
+/* ---------- 카카오톡 공유 ----------
+ * 프라이버시상 셀카는 업로드하지 않고, 결과 텍스트 + 앱 링크 카드만 보냅니다. */
+function shareKakao() {
+  if (!lockedType) return;
+  if (!window.Kakao) {
+    alert("카카오 공유를 불러오지 못했어요 😢 잠시 후 다시 시도해주세요.");
+    return;
+  }
+  if (!Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
+  const info = MBTI_INFO[lockedType];
+  try {
+    Kakao.Share.sendDefault({
+      objectType: "text",
+      text: `내 얼굴 MBTI는 ${lockedType} ${info.emoji}\n(${info.nick})\n\n나도 얼굴로 성격 알아보기 🫧`,
+      link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL },
+      buttonTitle: "나도 해보기",
+    });
+  } catch (e) {
+    alert("카카오 공유에 실패했어요 😢\n(카카오 개발자 콘솔에 사이트 도메인이 등록됐는지 확인해주세요)");
+  }
+}
 
 function downloadBlob(blob, fname) {
   const dl = URL.createObjectURL(blob);
